@@ -1,4 +1,5 @@
 Simple Nodejs RestAPI for the Authentication using PostgresSql with middleware
+
 -Register
 -Email Verification
 -Login with JWT token
