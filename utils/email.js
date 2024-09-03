@@ -43,7 +43,7 @@ function sendEmailVerification(user) {
 }
 
 
-function sendRestEmail(user) {
+function sendResetEmail(user) {
     const token = jwtToken.generateToken(user, emailToken = true);
 
     const html = getRestEmailHTML(user, token);
@@ -103,4 +103,4 @@ function getRestEmailHTML(user, token) {
 }
 
 exports.sendEmailVerification = sendEmailVerification;
-exports.sendRestEmail = sendRestEmail;
+exports.sendResetEmail = sendResetEmail;

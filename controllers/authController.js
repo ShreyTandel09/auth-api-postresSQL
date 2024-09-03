@@ -1,16 +1,13 @@
-const { User, RefreshToken } = require('../models');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { validateUser, validateLoginUser } = require('../validation/userValidation');
-const { sendEmailVerification, sendRestEmail } = require('../service/email');
-const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
+
+const httpStatus = require('http-status');
+
+const authService = require('../services/auth.service')
+const message = require('../utils/responseMessage')
+const { sendSuccess, sendError } = require('../helper/response.helper');
+const ApiError = require('../utils/ApiError');
 
 
 const register = async (req, res) => {
-    const { error } = validateUser(req.body);
-    if (error) {
-        return res.status(400).json({ error: error.details[0].message });
-    }
 
     const { first_name, last_name, email, password } = req.body;
 
@@ -77,44 +74,20 @@ const verifyEmail = async (req, res) => {
     }
 }
 
+
 const login = async (req, res) => {
-    const { email, password } = req.body;
-    const { error } = validateLoginUser(req.body);
-    if (error) {
-        return res.status(400).json({ error: error.details[0].message });
-    }
     try {
-        const user = await User.findOne({ where: { email } });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        const { email, password } = req.body;
+        const data = await authService.loginUser(email, password);
+        if (!data.statusCode) {
+            const { user, token, refreshToken } = data;
+            sendSuccess(res, { user, token, refreshToken }, message.USER_LOGGED_IN, httpStatus.OK);
+        } else {
+            sendError(res, data.message, data.statusCode);
         }
-
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) {
-            return res.status(400).json({ error: 'Invalid password!' });
-        }
-        if (!user.isVerified) {
-            return res.status(400).json({ error: 'Please verify your email!' });
-        }
-
-        //token and refresh token
-        const token = generateToken(user)
-        const refreshToken = generateRefreshToken(user)
-
-        // Create a new user with the hashed password
-        await RefreshToken.create({
-            token: refreshToken,
-            userId: user.id,
-        });
-
-        res.status(200).json({
-            message: 'User login successful',
-            user: user,
-            token: token,
-            refreshToken: refreshToken
-        });
     } catch (error) {
-        res.status(500).json({ message: 'Something went wrong', error });
+        console.error("Unexpected error:", error);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
     }
 };
 
@@ -167,7 +140,7 @@ const forgotPassword = async (req, res) => {
         }
 
         //Forget password Email
-        sendRestEmail(user)
+        sendResetEmail(user)
         res.status(201).json({
             message: 'Password reset email sent',
         });
