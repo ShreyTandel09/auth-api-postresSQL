@@ -12,7 +12,7 @@ const register = async (req, res) => {
         return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { name, email, password } = req.body;
+    const { first_name, last_name, email, password } = req.body;
 
     try {
         // Check if the user already exists
@@ -27,7 +27,8 @@ const register = async (req, res) => {
 
         // Create a new user with the hashed password
         const newUser = await User.create({
-            name,
+            first_name,
+            last_name,
             email,
             password: hashedPassword,
             confirmPassword: hashedPassword
@@ -41,7 +42,8 @@ const register = async (req, res) => {
             message: 'User registration successful',
             user: {
                 id: newUser.id,
-                name: newUser.name,
+                first_name: newUser.first_name,
+                last_name: newUser.last_name,
                 email: newUser.email,
                 role: newUser.role,
                 isVerified: newUser.isVerified
@@ -154,7 +156,7 @@ const refreshToken = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
     try {
-
+        console.log(req.body);
         const { email } = req.body;
         if (!email) {
             return res.status(401).json({ error: 'Email is Required' });
