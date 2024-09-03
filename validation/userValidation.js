@@ -15,7 +15,8 @@ function validateLoginUser(user) {
 // Function to validate user input
 function validateUser(user) {
     const schema = Joi.object({
-        name: Joi.string().min(3).required(),
+        first_name: Joi.string().min(3).required(),
+        last_name: Joi.string().min(3).required(),
         email: Joi.string().email().required(),
         password: Joi.string().min(6).required(),
         confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
