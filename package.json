@@ -19,7 +19,7 @@
   },
   "name": "auth-restapi-sequelize",
   "description": "Simple Nodejs RestAPI for the Authentication using PostgresSql with middleware -Register -Email Verification -Login with JWT token -Refresh Token -Reset Password",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "app.js",
   "devDependencies": {},
   "repository": {
