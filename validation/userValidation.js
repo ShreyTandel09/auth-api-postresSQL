@@ -17,7 +17,22 @@ const validateUser = {
         last_name: Joi.string().min(3).required(),
         email: Joi.string().email().required(),
         password: Joi.string().min(6).required(),
-        confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
+        confirm_password: Joi.string().valid(Joi.ref('password')).required().messages({
+            'any.only': 'Confirm Password must match the Password'
+        })
+    })
+}
+
+const validateEmail = {
+    body: Joi.object().keys({
+        email: Joi.string().email().required(),
+    })
+}
+
+const validateResetPassword = {
+    body: Joi.object().keys({
+        password: Joi.string().min(6).required(),
+        confirm_password: Joi.string().valid(Joi.ref('password')).required().messages({
             'any.only': 'Confirm Password must match the Password'
         })
     })
@@ -26,4 +41,6 @@ const validateUser = {
 module.exports = {
     validateLoginUser,
     validateUser,
+    validateEmail,
+    validateResetPassword
 };

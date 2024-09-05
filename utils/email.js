@@ -6,14 +6,11 @@ const jwtToken = require('../utils/jwtToken');
 
 function sendEmailVerification(user) {
 
-    console.log("user");
     const token = jwtToken.generateToken(user, emailToken = true);
 
     const html = getVerificationEmailHTML(user, token);
     // Create a transporter object using the default SMTP transport
 
-
-    console.log(token);
     let transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -27,7 +24,7 @@ function sendEmailVerification(user) {
         from: process.env.MAIL_FROM_ADDRESS,
         to: user.email,
         subject: 'Verify Your Email',
-        text: `Hi ${user.name}, please verify your email by clicking the following link: ${process.env.FRONTEND_URL}/auth/verify-email?token=${token}`,
+        text: `Hi ${user.name}, please verify your email by clicking the following link: ${process.env.FRONTEND_URL}/api/auth/verify-email?token=${token}`,
         html: html
     };
 
@@ -61,7 +58,7 @@ function sendResetEmail(user) {
         from: process.env.MAIL_FROM_ADDRESS,
         to: user.email,
         subject: 'Reset Your Password',
-        text: `Hi ${user.name}, please reset your password by clicking the following link: ${process.env.FRONTEND_URL}/auth/reset-password?token=${token}`,
+        text: `Hi ${user.name}, please reset your password by clicking the following link: ${process.env.FRONTEND_URL}/api/auth/reset-password?token=${token}`,
         html: html
     };
 

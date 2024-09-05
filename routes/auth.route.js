@@ -14,14 +14,17 @@ const router = express.Router();
 router.post('/register', validate(authValidation.validateUser), authController.register);
 // Verify user email
 router.get('/verify-email', authController.verifyEmail);
+//resend Verify Email
+router.post('/resend-verify-email', validate(authValidation.validateEmail), authController.resendVerifyEmail);
+
 // Login user
 router.post('/login', validate(authValidation.validateLoginUser), authController.login);
 // Refresh authentication token
 router.post('/refresh-token', authController.refreshToken);
 // Forgot password
-router.post('/forgot-password', authController.forgotPassword);
+router.post('/forgot-password', validate(authValidation.validateEmail), authController.forgotPassword);
 // Reset password
-router.post('/reset-password', authController.resetPassword);
+router.post('/reset-password', validate(authValidation.validateResetPassword), authController.resetPassword);
 // Get user profile (protected route)
 router.get('/profile', isAuthenticated, getUserProfile);
 

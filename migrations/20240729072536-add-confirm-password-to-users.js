@@ -10,7 +10,7 @@ module.exports = {
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
 
-    await queryInterface.addColumn('Users', 'confirmPassword', {
+    await queryInterface.addColumn('Users', 'confirm_password', {
       type: Sequelize.STRING,
       allowNull: true, // Adjust as necessary
     });
@@ -25,7 +25,7 @@ module.exports = {
      */
 
     down: async (queryInterface, Sequelize) => {
-      await queryInterface.removeColumn('Users', 'confirmPassword');
+      await queryInterface.removeColumn('Users', 'confirm_password');
     }
   }
 };
