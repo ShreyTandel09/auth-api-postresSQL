@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
       unique: true // Ensures that email is unique
     },
     password: DataTypes.STRING,
-    confirmPassword: DataTypes.STRING,
+    confirm_password: DataTypes.STRING,
     role: {
       type: DataTypes.STRING,
       defaultValue: 'user', // Default value for role

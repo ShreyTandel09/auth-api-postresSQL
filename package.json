@@ -10,8 +10,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "http-status": "^1.4.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "logger": "^0.0.1",
     "nodemailer": "^6.9.14",
     "pg": "^8.12.0",
     "pg-hstore": "^2.3.4",
@@ -21,7 +23,6 @@
   "description": "Simple Nodejs RestAPI for the Authentication using PostgresSql with middleware -Register -Email Verification -Login with JWT token -Refresh Token -Reset Password",
   "version": "1.0.1",
   "main": "app.js",
-  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ShreyTandel09/auth-api-postresSQL.git"
