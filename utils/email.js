@@ -75,7 +75,7 @@ function sendResetEmail(user) {
 
 
 function getVerificationEmailHTML(user, token) {
-    const verificationLink = `${process.env.FRONTEND_URL}/auth/verify-email?token=${token}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/api/auth/verify-email?token=${token}`;
 
     return `
         <h1>Email Verification</h1>
@@ -88,7 +88,7 @@ function getVerificationEmailHTML(user, token) {
 
 
 function getRestEmailHTML(user, token) {
-    const verificationLink = `${process.env.FRONTEND_URL}/auth/reset-password?token=${token}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/api/auth/reset-password?token=${token}`;
 
     return `
         <h1>Reset Password</h1>
