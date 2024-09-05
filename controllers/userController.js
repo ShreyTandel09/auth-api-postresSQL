@@ -13,4 +13,18 @@ const getUserProfile = async (req, res) => {
     }
 }
 
+
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.findAll();
+        res.status(200).json({
+            message: 'All Users!!',
+            users: users
+        })
+    } catch (error) {
+        console.error(error.message);
+        return { error: 'Server error' };
+    }
+}
+
 module.exports = { getUserProfile };
