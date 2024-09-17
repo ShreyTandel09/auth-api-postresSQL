@@ -1,6 +1,8 @@
 const express = require('express');
 //auth routes
 const authRoute = require('./auth.route');
+const userRoute = require('./user.route');
+
 //Logger
 const logger = require('../middleware/logger');
 const router = express.Router();
@@ -10,6 +12,10 @@ const defaultRoutes = [
     {
         path: '/auth',
         route: authRoute,
+    },
+    {
+        path: '/user',
+        route: userRoute,
     },
 ];
 

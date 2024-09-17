@@ -2,9 +2,7 @@ const express = require('express');
 const validate = require('../middleware/validate');
 const authValidation = require('../validation/authValidation');
 const authController = require('../controllers/authController');
-const { getUserProfile } = require('../controllers/userController');
 
-const isAuthenticated = require('../middleware/authMiddleware');
 
 
 
@@ -26,7 +24,7 @@ router.post('/forgot-password', validate(authValidation.validateEmail), authCont
 // Reset password
 router.post('/reset-password', validate(authValidation.validateResetPassword), authController.resetPassword);
 // Get user profile (protected route)
-router.get('/profile', isAuthenticated, getUserProfile);
+
 
 
 module.exports = router;

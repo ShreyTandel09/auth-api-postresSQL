@@ -1,30 +1,40 @@
-const { User } = require('../models');
+
+const httpStatus = require('http-status');
+const userService = require('../services/user.service')
+const message = require('../utils/responseMessage')
+const ApiError = require('../utils/ApiError');
+const { sendSuccess, sendError } = require('../helper/response.helper');
 
 
 const getUserProfile = async (req, res) => {
     try {
-        res.status(200).json({
-            message: 'User Data!!',
-            user: req.user
-        })
+        const data = await userService.getCurrentUser(req);
+
+        if (!data.statusCode) {
+            sendSuccess(res, data, message.USER_PROFILE_FETCH, httpStatus.OK);
+        } else {
+            sendError(res, data.message, data.statusCode);
+        }
+
     } catch (error) {
-        console.error(error.message);
-        return { error: 'Server error' };
+        console.error("Unexpected error:", error);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
     }
 }
 
 
 const getAllUsers = async (req, res) => {
     try {
-        const users = await User.findAll();
-        res.status(200).json({
-            message: 'All Users!!',
-            users: users
-        })
+        const data = await userService.getAllUsers();
+        sendSuccess(res, data, message.USER_PROFILE_FETCH, httpStatus.OK);
+
     } catch (error) {
-        console.error(error.message);
-        return { error: 'Server error' };
+        console.error("Unexpected error:", error);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
     }
 }
 
-module.exports = { getUserProfile };
+module.exports = {
+    getUserProfile,
+    getAllUsers
+};

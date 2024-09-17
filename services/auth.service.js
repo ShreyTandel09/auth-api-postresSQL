@@ -1,6 +1,4 @@
 const { User, RefreshToken } = require('../models');
-const httpStatus = require('http-status');
-
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendEmailVerification, sendResetEmail } = require('../utils/email');
