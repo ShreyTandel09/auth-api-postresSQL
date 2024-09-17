@@ -26,7 +26,7 @@ const getUserProfile = async (req, res) => {
 const getAllUsers = async (req, res) => {
     try {
         const data = await userService.getAllUsers();
-        sendSuccess(res, data, message.USER_PROFILE_FETCH, httpStatus.OK);
+        sendSuccess(res, data, message.USER_ALL, httpStatus.OK);
 
     } catch (error) {
         console.error("Unexpected error:", error);

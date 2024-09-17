@@ -19,7 +19,10 @@ const getCurrentUser = async (data) => {
 const getAllUsers = async () => {
     try {
         const users = await User.findAll();
-        return users;
+        const userData = {
+            users: users
+        }
+        return userData;
     } catch (error) {
         throw new ApiError(500, 'Internal Server Error');
     }
