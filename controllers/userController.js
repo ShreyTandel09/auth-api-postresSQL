@@ -34,7 +34,31 @@ const getAllUsers = async (req, res) => {
     }
 }
 
+const updateUserProfile = async (req, res) => {
+    try {
+        const data = await userService.updateUser(req.user.id, req.body);
+        sendSuccess(res, data, message.USER_UPDATE, httpStatus.OK);
+
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+    }
+}
+
+const updateUserProfilePicture = async (req, res) => {
+    try {
+        const data = await userService.uploadProfilePicture(req.user.id, req.file);
+        sendSuccess(res, data, message.USER_UPDATE, httpStatus.OK);
+
+    } catch (error) {
+        console.error("Unexpected error in Controller:", error);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+    }
+}
+
 module.exports = {
     getUserProfile,
-    getAllUsers
+    getAllUsers,
+    updateUserProfile,
+    updateUserProfilePicture
 };

@@ -11,6 +11,7 @@ app.use(cors()); // enable cors
 app.options('*', cors()); // enable pre-flight
 
 app.use(bodyParser.json());
+app.use('/uploads', express.static('uploads'));
 app.use('/api', routes);
 
 const PORT = process.env.PORT || 8000;
