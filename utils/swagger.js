@@ -1,5 +1,9 @@
+require('dotenv').config(); // Load environment variables
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+
+// Retrieve the BASE_URL from the environment variables
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000/v1';
 
 // Basic options for Swagger documentation
 const swaggerOptions = {
@@ -9,14 +13,26 @@ const swaggerOptions = {
             title: 'API Documentation',
             version: '1.0.0',
             description: 'A simple Node.js API',
-            contact: {
-                name: 'Your Name',
-                email: 'your.email@example.com',
+            // Uncomment and update the contact details if required
+            // contact: {
+            //     name: 'Shrey Tandel',
+            //     email: 'your.email@example.com',
+            // },
+        },
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT', // Optional, specifies the format of the token
+                },
             },
         },
+
         servers: [
             {
-                url: 'http://localhost:8000/api', // Replace with your server URL
+                url: `http://${BASE_URL}/api`, // Use the BASE_URL dynamically
+                description: 'URL as per ENV',
             },
         ],
     },
