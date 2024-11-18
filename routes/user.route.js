@@ -13,7 +13,7 @@ router.get('/all', isAuthenticated, userController.getAllUsers);
 
 router.put('/update-profile', isAuthenticated, userController.updateUserProfile);
 
-router.post('/upload-profile-picture', isAuthenticated, upload.single('profile_picture'), userController.updateUserProfilePicture);
+router.post('/upload-profile-picture', isAuthenticated, upload.single('profileImage'), userController.updateUserProfilePicture);
 
 
 module.exports = router;

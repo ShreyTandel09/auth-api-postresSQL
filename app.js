@@ -3,12 +3,18 @@ const bodyParser = require('body-parser');
 const { sequelize } = require('./models');
 const routes = require('./routes/index');
 const cors = require('cors'); // Import the cors module
-
+const { swaggerDocs, swaggerUi } = require('./utils/swagger');
 
 
 const app = express();
 app.use(cors()); // enable cors
 app.options('*', cors()); // enable pre-flight
+// Swagger route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+// Example route
+app.get('/api/v1/example', (req, res) => {
+    res.send('This is an example endpoint');
+});
 
 app.use(bodyParser.json());
 app.use('/uploads', express.static('uploads'));
