@@ -154,6 +154,7 @@ const loginUser = async (email, password) => {
             throw error;
         }
     } catch (error) {
+        logError(error, 'Error in loginUser');
         throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
 };
@@ -205,17 +206,15 @@ const forgotPasswordService = async (data) => {
         const { email } = data;
         let user = await User.findOne({ where: { email } });
         if (!user) {
-            return { message: 'User not found', statusCode: 400 };
-
+            throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
         }
-        sendResetEmail(user)
+        await sendResetEmail(user);
         return user;
-
     } catch (error) {
-        console.error("Error in forgotPasswordService:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        logError(error, 'Error in forgotPasswordService');
+        throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
-}
+};
 
 const resetPasswordService = async (data) => {
     const { token, password } = data;
