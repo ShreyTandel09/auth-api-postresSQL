@@ -1,13 +1,13 @@
 const { User, RefreshToken } = require('../models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { sendEmailVerification, sendResetEmail } = require('../utils/email');
-const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
+const httpStatus = require('http-status');
 const { Op } = require('sequelize');
 const { sequelize } = require('../models');
-
 const ApiError = require('../utils/ApiError');
-
+const { sendEmailVerification, sendResetEmail } = require('../utils/email');
+const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
+const { logger } = require('../middleware/logger');
 
 const registerUser = async (data) => {
     try {
@@ -37,6 +37,7 @@ const registerUser = async (data) => {
                 password: hashedPassword,
                 confirm_password: hashedPassword
             }, { transaction });
+
             // Send email verification
             await sendEmailVerification(newUser);
 
@@ -44,10 +45,15 @@ const registerUser = async (data) => {
             return newUser;
         } catch (error) {
             await transaction.rollback();
+            logger.error('Error in registerUser:', error);
             throw error instanceof ApiError ? error :
                 new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
         }
     } catch (error) {
+        logger.error('Error in registerUser:', {
+            error: error.message,
+            stack: error.stack
+        });
         throw error instanceof ApiError ? error :
             new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }

@@ -1,19 +1,19 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 const jwtToken = require('../utils/jwtToken');
-const logger = require('../config/logger');
+const { logger } = require('../middleware/logger');
 const ApiError = require('../utils/ApiError');
 const httpStatus = require('http-status');
 
-function createTransporter() {
+const createTransporter = () => {
     return nodemailer.createTransport({
         service: 'gmail',
         auth: {
-            user: process.env.MAIL_FROM_ADDRESS, // Replace with your email
-            pass: process.env.MAIL_PASSWORD // Replace with your email password
+            user: process.env.MAIL_FROM_ADDRESS,
+            pass: process.env.MAIL_PASSWORD
         }
     });
-}
+};
 
 const sendEmailVerification = async (user) => {
     try {
@@ -30,7 +30,7 @@ const sendEmailVerification = async (user) => {
 
         logger.info(`Verification email sent to ${user.email}`);
     } catch (error) {
-        logger.error('Email sending failed:', error);
+        logger.error('Email sending failed:', { error: error.message, stack: error.stack });
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send verification email');
     }
 };

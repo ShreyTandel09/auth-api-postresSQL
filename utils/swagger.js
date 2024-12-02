@@ -1,36 +1,41 @@
 require('dotenv').config(); // Load environment variables
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const components = require('../docs/components.docs');
-const authDocs = require('../docs/auth.docs');
-const userDocs = require('../docs/user.docs');
 
-const options = {
+// Basic options for Swagger documentation
+const swaggerOptions = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'API Documentation',
+            title: 'Authentication API Documentation',
             version: '1.0.0',
-            description: 'API Documentation'
+            description: 'A API Documentation for Authentication System',
+            contact: {
+                name: 'Your Name',
+                email: 'your.email@example.com',
+            },
         },
         servers: [
             {
-                url: `${process.env.BASE_URL}/api/v1`,
-                description: 'API V1'
-            }
+                url: 'http://localhost:8000/api',
+                description: 'Development server',
+            },
         ],
-        components,
-        paths: {
-            ...authDocs,
-            ...userDocs
-        }
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            },
+        },
     },
-    apis: []
+    apis: [
+        './docs/swagger/*.swagger.js'
+    ],
 };
 
-const specs = swaggerJsDoc(options);
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
-module.exports = {
-    serve: swaggerUi.serve,
-    setup: swaggerUi.setup(specs)
-};
+module.exports = { swaggerUi, swaggerDocs };

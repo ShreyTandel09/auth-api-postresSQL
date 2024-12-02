@@ -1,6 +1,8 @@
 const ApiError = require('../utils/ApiError');
 const { User } = require('../models');
 const message = require('../utils/responseMessage')
+const httpStatus = require('http-status');
+const { logger } = require('../middleware/logger');
 
 
 const getCurrentUser = async (data) => {
@@ -11,7 +13,11 @@ const getCurrentUser = async (data) => {
         }
         return user;
     } catch (error) {
-        res.status(error.statusCode || 500).json({ message: error.message });
+        logger.error('Error in getCurrentUser:', {
+            error: error.message,
+            stack: error.stack
+        });
+        throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
 };
 

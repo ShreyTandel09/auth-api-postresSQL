@@ -11,7 +11,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "http-status": "^1.4.0",
+    "express-rate-limit": "^7.4.1",
+    "http-status": "^1.8.1",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "logger": "^0.0.1",
@@ -22,7 +23,8 @@
     "sequelize": "^6.37.3",
     "sequelize-cli": "^6.6.2",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.0",
+    "winston": "^3.17.0"
   },
   "name": "auth-restapi-sequelize",
   "description": "Simple Nodejs RestAPI for the Authentication using PostgresSql with middleware -Register -Email Verification -Login with JWT token -Refresh Token -Reset Password",
