@@ -7,7 +7,7 @@ const { sequelize } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { sendEmailVerification, sendResetEmail } = require('../utils/email');
 const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
-const { logger } = require('../middleware/logger');
+const { logger, logError } = require('../middleware/logger');
 
 const registerUser = async (data) => {
     try {
@@ -45,15 +45,12 @@ const registerUser = async (data) => {
             return newUser;
         } catch (error) {
             await transaction.rollback();
-            logger.error('Error in registerUser:', error);
+            logError(error, 'Error in registerUser');
             throw error instanceof ApiError ? error :
                 new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
         }
     } catch (error) {
-        logger.error('Error in registerUser:', {
-            error: error.message,
-            stack: error.stack
-        });
+        logError(error, 'Error in registerUser');
         throw error instanceof ApiError ? error :
             new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
