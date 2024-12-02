@@ -3,40 +3,53 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendEmailVerification, sendResetEmail } = require('../utils/email');
 const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
+const { Op } = require('sequelize');
+const { sequelize } = require('../models');
 
 const ApiError = require('../utils/ApiError');
 
 
 const registerUser = async (data) => {
     try {
-
         const { first_name, last_name, email, password } = data;
-
-        // Check if the user already exists
-        const existingUser = await User.findOne({ where: { email } });
-        if (existingUser) {
-            return { message: 'User Already Exist!', statusCode: 400 };
+        if (!first_name || !last_name || !email || !password) {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'All fields are required');
         }
+        // Start transaction
+        const transaction = await sequelize.transaction();
 
-        // Hash the password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        try {
+            // Check if the user already exists
+            const existingUser = await User.findOne({ where: { email } });
+            if (existingUser) {
+                throw new ApiError(httpStatus.BAD_REQUEST, 'User Already Exists');
+            }
 
-        // Create a new user with the hashed password
-        const newUser = await User.create({
-            first_name,
-            last_name,
-            email,
-            password: hashedPassword,
-            confirm_password: hashedPassword
-        });
-        // Send email verification
-        sendEmailVerification(newUser);
+            // Hash the password
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
 
-        return newUser;
+            // Create a new user with the hashed password
+            const newUser = await User.create({
+                first_name,
+                last_name,
+                email,
+                password: hashedPassword,
+                confirm_password: hashedPassword
+            }, { transaction });
+            // Send email verification
+            await sendEmailVerification(newUser);
+
+            await transaction.commit();
+            return newUser;
+        } catch (error) {
+            await transaction.rollback();
+            throw error instanceof ApiError ? error :
+                new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        }
     } catch (error) {
-        console.log("Error in registerUser service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        throw error instanceof ApiError ? error :
+            new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
 };
 
@@ -44,8 +57,10 @@ const registerUser = async (data) => {
 const verifyUser = async (data) => {
     try {
         const { token } = data;
-
-        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        // Should check if token is expired
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET, {
+            ignoreExpiration: false
+        });
         const { email } = decodedToken;
 
         let user = await User.findOne({ where: { email } });
@@ -59,7 +74,7 @@ const verifyUser = async (data) => {
         return user;
 
     } catch (error) {
-        console.log("Error in VerifyUser service:", error);
+        console.error("Error in VerifyUser:", error);
         return { message: 'Internal Server Error', statusCode: 500 };
     }
 }
@@ -74,64 +89,92 @@ const resendVerifyUserEmail = async (data) => {
             return { message: 'User not found', statusCode: 400 };
 
         }
+        if (user.isVerified) {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'Email is already verified');
+        }
         sendEmailVerification(user);
         return user;
 
     } catch (error) {
-        console.log("Error in resendVerifyUserEmail service:", error);
+        console.error("Error in resendVerifyUserEmail:", error);
         return { message: 'Internal Server Error', statusCode: 500 };
     }
 }
 
 const loginUser = async (email, password) => {
     try {
-        const user = await User.findOne({ where: { email }, raw: true }); // Ensure raw: true for plain object
+        // Input validation
+        if (!email || !password) {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'Email and password are required');
+        }
+
+        // Find user with select fields only
+        const user = await User.findOne({
+            where: { email },
+            attributes: ['id', 'email', 'password', 'isVerified'],
+            raw: true
+        });
 
         if (!user) {
-            return { message: 'User not found', statusCode: 404 };
+            throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
-            return { message: 'Invalid password!', statusCode: 400 };
+            throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid password');
         }
 
         if (!user.isVerified) {
-            return { message: 'Please verify your email!', statusCode: 400 };
+            throw new ApiError(httpStatus.BAD_REQUEST, 'Please verify your email');
         }
 
-        // Generate tokens
-        const token = generateToken(user);
-        const refreshToken = generateRefreshToken(user);
+        const transaction = await sequelize.transaction();
+        try {
+            // Generate tokens
+            const token = generateToken(user);
+            const refreshToken = generateRefreshToken(user);
 
-        // Save refresh token
-        await RefreshToken.create({
-            token: refreshToken,
-            userId: user.id,
-        });
+            // Save refresh token
+            await RefreshToken.create({
+                token: refreshToken,
+                userId: user.id,
+            }, { transaction });
 
-        // Return plain data with statusCode for success
-        return {
-            user,
-            token,
-            refreshToken,
-        };
+            await transaction.commit();
+
+            // Remove password from response
+            delete user.password;
+
+            return { user, token, refreshToken };
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
     } catch (error) {
-        console.log("Error in loginUser service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
 };
 
 
 const refreshTokenService = async (data) => {
+    const { refreshToken } = data;
+    if (!refreshToken) {
+        throw new ApiError(httpStatus.BAD_REQUEST, 'Refresh token is required');
+    }
     try {
+        // Clean up expired tokens
+        await RefreshToken.destroy({
+            where: {
+                createdAt: {
+                    [Op.lt]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days
+                }
+            }
+        });
 
-        const { refreshToken } = data;
-        if (!refreshToken) {
-            return { message: 'Refresh token is required', statusCode: 401 };
-        }
-
-        const refreshTokenData = await RefreshToken.findOne({ token: refreshToken });
+        const refreshTokenData = await RefreshToken.findOne({
+            where: { token: refreshToken },
+            attributes: ['userId', 'token']
+        });
         if (!refreshTokenData) {
             return { message: 'Invalid refresh token', statusCode: 401 };
         }
@@ -149,8 +192,7 @@ const refreshTokenService = async (data) => {
         }
         return resData;
     } catch (error) {
-        console.log("Error in VerifyUser service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error');
     }
 }
 
@@ -167,40 +209,40 @@ const forgotPasswordService = async (data) => {
         return user;
 
     } catch (error) {
-        console.log("Error in forgotPasswordService service:", error);
+        console.error("Error in forgotPasswordService:", error);
         return { message: 'Internal Server Error', statusCode: 500 };
     }
 }
 
 const resetPasswordService = async (data) => {
-    try {
-        // const { token, newPassword } = data;
+    const { token, password } = data;
 
-        const { token } = data.query
-        const { password } = data.body
-
-        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-        const { email } = decodedToken;
-
-        console.log(email);
-
-        let user = await User.findOne({ where: { email } });
-        if (!user) {
-            return { message: 'Invalid or expired token', statusCode: 400 };
-
-        }
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-        user.password = hashedPassword;
-        user.confirm_password = hashedPassword;
-        await user.save();
-        return user;
-
-    } catch (error) {
-        console.log("Error in resetPasswordService service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+    // Verify token and check expiration
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (Date.now() >= payload.exp * 1000) {
+        throw new ApiError(httpStatus.BAD_REQUEST, 'Reset token has expired');
     }
-}
+
+    // Use transaction for password update
+    const transaction = await sequelize.transaction();
+    try {
+        const user = await User.findByPk(payload.userId);
+        await user.update({
+            password: await bcrypt.hash(password, 10)
+        }, { transaction });
+
+        // Invalidate all existing sessions
+        await RefreshToken.destroy({
+            where: { userId: user.id },
+            transaction
+        });
+
+        await transaction.commit();
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+};
 
 
 module.exports = {

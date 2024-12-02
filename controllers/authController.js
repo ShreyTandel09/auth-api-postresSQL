@@ -1,4 +1,3 @@
-
 const httpStatus = require('http-status');
 
 const authService = require('../services/auth.service')
@@ -7,25 +6,17 @@ const { sendSuccess, sendError } = require('../helper/response.helper');
 const ApiError = require('../utils/ApiError');
 
 
-const register = async (req, res) => {
+const register = async (req, res, next) => {
     try {
         const data = await authService.registerUser(req.body);
-
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.USER_REGISTER, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
-
+        sendSuccess(res, data, message.USER_REGISTER, httpStatus.CREATED);
     } catch (error) {
-        console.error("Unexpected error:", error);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        next(error);
     }
 };
 
 
-const verifyEmail = async (req, res) => {
-
+const verifyEmail = async (req, res, next) => {
     try {
         const data = await authService.verifyUser(req.query);
         if (!data.statusCode) {
@@ -33,15 +24,13 @@ const verifyEmail = async (req, res) => {
         } else {
             sendError(res, data.message, data.statusCode);
         }
-    } catch (err) {
-        console.error(err.message);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+    } catch (error) {
+        next(error);
     }
-}
+};
 
 
-const resendVerifyEmail = async (req, res) => {
-
+const resendVerifyEmail = async (req, res, next) => {
     try {
         const data = await authService.resendVerifyUserEmail(req.body);
         if (!data.statusCode) {
@@ -49,14 +38,13 @@ const resendVerifyEmail = async (req, res) => {
         } else {
             sendError(res, data.message, data.statusCode);
         }
-    } catch (err) {
-        console.error(err.message);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+    } catch (error) {
+        next(error);
     }
-}
+};
 
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
         const data = await authService.loginUser(email, password);
@@ -67,14 +55,12 @@ const login = async (req, res) => {
             sendError(res, data.message, data.statusCode);
         }
     } catch (error) {
-        console.error("Unexpected error:", error);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        next(error);
     }
 };
 
 
-const refreshToken = async (req, res) => {
-
+const refreshToken = async (req, res, next) => {
     try {
         const data = await authService.refreshTokenService(req.body);
         if (!data.statusCode) {
@@ -83,15 +69,12 @@ const refreshToken = async (req, res) => {
         } else {
             sendError(res, data.message, data.statusCode);
         }
-
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Server error' });
+        next(error);
     }
-
 };
 
-const forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res, next) => {
     try {
         const data = await authService.forgotPasswordService(req.body);
         if (!data.statusCode) {
@@ -100,13 +83,11 @@ const forgotPassword = async (req, res) => {
             sendError(res, data.message, data.statusCode);
         }
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Server error' });
+        next(error);
     }
+};
 
-}
-
-const resetPassword = async (req, res) => {
+const resetPassword = async (req, res, next) => {
     try {
         const data = await authService.resetPasswordService(req);
         if (!data.statusCode) {
@@ -115,10 +96,9 @@ const resetPassword = async (req, res) => {
             sendError(res, data.message, data.statusCode);
         }
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Server error' });
+        next(error);
     }
-}
+};
 
 
 module.exports = {

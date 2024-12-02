@@ -1,8 +1,15 @@
 // logger.js
 const logger = (req, res, next) => {
-    console.log(`Request Method: ${req.method}`);
-    console.log(`Request URL: ${req.originalUrl}`);
-    console.log(`Request Body:`, req.body);
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        logger.info({
+            method: req.method,
+            url: req.originalUrl,
+            status: res.statusCode,
+            duration: `${duration}ms`
+        });
+    });
     next();
 };
 

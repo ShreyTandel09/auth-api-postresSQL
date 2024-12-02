@@ -38,9 +38,21 @@ const validateResetPassword = {
     })
 }
 
+const loginSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string()
+        .min(8)
+        .pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
+        .required()
+        .messages({
+            'string.pattern.base': 'Password must contain uppercase, lowercase, number and special character'
+        })
+});
+
 module.exports = {
     validateLoginUser,
     validateUser,
     validateEmail,
-    validateResetPassword
+    validateResetPassword,
+    loginSchema
 };
