@@ -1,11 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { sequelize } = require('./models');
-const routes = require('./routes/v1/index');
+const routes = require('./routes/v1');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const { swaggerDocs } = require('./utils/swagger');
 const errorHandler = require('./middleware/errorHandler');
+const logger = require('./utils/logger');
+const requestLogger = require('./middleware/requestLogger');
 
 const app = express();
 
@@ -15,6 +17,9 @@ app.options('*', cors());
 app.use(bodyParser.json());
 app.use('/uploads', express.static('uploads'));
 
+// Add request logger before other middleware
+app.use(requestLogger);
+
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, {
     explorer: true,
@@ -22,16 +27,26 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, {
 }));
 
 // Routes
-app.use('/api', routes);
+app.use('/api/v1', routes);
 
 // Error handler (must be after routes)
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 8000;
 
-app.listen(PORT, async () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Swagger Documentation: http://localhost:${PORT}/api-docs`);
-    await sequelize.authenticate();
-    console.log('Database connected!');
-});
+const startServer = async () => {
+    try {
+        await sequelize.authenticate();
+        logger.info('Database connected successfully');
+
+        app.listen(PORT, () => {
+            logger.info(`Server is running on port ${PORT}`);
+            logger.info(`Swagger Documentation: http://localhost:${PORT}/api-docs`);
+        });
+    } catch (error) {
+        logger.error('Server startup failed', { error });
+        process.exit(1);
+    }
+};
+
+startServer();

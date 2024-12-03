@@ -7,7 +7,7 @@ const { sequelize } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { sendEmailVerification, sendResetEmail } = require('../utils/email');
 const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
-const { logger, logError } = require('../middleware/logger');
+const { logger, logError } = require('../utils/logger');
 
 const registerUser = async (data) => {
     try {
@@ -15,21 +15,17 @@ const registerUser = async (data) => {
         if (!first_name || !last_name || !email || !password) {
             throw new ApiError(httpStatus.BAD_REQUEST, 'All fields are required');
         }
-        // Start transaction
-        const transaction = await sequelize.transaction();
 
+        const transaction = await sequelize.transaction();
         try {
-            // Check if the user already exists
             const existingUser = await User.findOne({ where: { email } });
             if (existingUser) {
                 throw new ApiError(httpStatus.BAD_REQUEST, 'User Already Exists');
             }
 
-            // Hash the password
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            // Create a new user with the hashed password
             const newUser = await User.create({
                 first_name,
                 last_name,
@@ -38,19 +34,22 @@ const registerUser = async (data) => {
                 confirm_password: hashedPassword
             }, { transaction });
 
-            // Send email verification
             await sendEmailVerification(newUser);
-
+            console.log("newUser", newUser);
             await transaction.commit();
+
             return newUser;
         } catch (error) {
+            console.log("error", error);
             await transaction.rollback();
-            logError(error, 'Error in registerUser');
             throw error instanceof ApiError ? error :
                 new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
         }
     } catch (error) {
-        logError(error, 'Error in registerUser');
+        logger.error('Error in registerUser', {
+            error: error.message,
+            stack: error.stack
+        });
         throw error instanceof ApiError ? error :
             new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }

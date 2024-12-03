@@ -1,15 +1,10 @@
-const { logger } = require('./logger');
+const logger = require('../utils/logger');
 const ApiError = require('../utils/ApiError');
 const httpStatus = require('http-status');
 
 const errorHandler = (err, req, res, next) => {
-    // Log the error
-    logger.error('Error occurred:', {
-        error: err.message,
-        stack: err.stack,
-        path: req.path,
-        method: req.method
-    });
+    // Log the error using the logError helper
+    logger.logError(err, req);
 
     if (err instanceof ApiError) {
         return res.status(err.statusCode).json({

@@ -2,7 +2,7 @@ const ApiError = require('../utils/ApiError');
 const { User } = require('../models');
 const message = require('../utils/responseMessage')
 const httpStatus = require('http-status');
-const { logger, logError } = require('../middleware/logger');
+const { logger, logError } = require('../utils/logger');
 
 
 const getCurrentUser = async (data) => {
