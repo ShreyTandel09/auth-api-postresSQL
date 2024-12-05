@@ -1,3 +1,4 @@
+
 const httpStatus = require('http-status');
 
 const authService = require('../services/auth.service')
@@ -6,31 +7,41 @@ const { sendSuccess, sendError } = require('../helper/response.helper');
 const ApiError = require('../utils/ApiError');
 
 
-const register = async (req, res, next) => {
+const register = async (req, res) => {
     try {
         const data = await authService.registerUser(req.body);
-        sendSuccess(res, data, message.USER_REGISTER, httpStatus.CREATED);
-    } catch (error) {
-        next(error);
-    }
-};
 
-
-const verifyEmail = async (req, res, next) => {
-    try {
-        const data = await authService.verifyUser(req.query);
         if (!data.statusCode) {
-            sendSuccess(res, data, message.EMAIL_VERIFIED, httpStatus.OK);
+            sendSuccess(res, data, message.USER_REGISTER, httpStatus.OK);
         } else {
             sendError(res, data.message, data.statusCode);
         }
+
     } catch (error) {
-        next(error);
+        console.error("Unexpected error:", error);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
     }
 };
 
 
-const resendVerifyEmail = async (req, res, next) => {
+const verifyEmail = async (req, res) => {
+
+    try {
+        const data = await authService.verifyUser(req.query);
+        if (!data.statusCode) {
+            sendSuccess(res, [], message.EMAIL_VERIFIED, httpStatus.OK);
+        } else {
+            sendError(res, data.message, data.statusCode);
+        }
+    } catch (err) {
+        console.error(err.message);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+    }
+}
+
+
+const resendVerifyEmail = async (req, res) => {
+
     try {
         const data = await authService.resendVerifyUserEmail(req.body);
         if (!data.statusCode) {
@@ -38,13 +49,14 @@ const resendVerifyEmail = async (req, res, next) => {
         } else {
             sendError(res, data.message, data.statusCode);
         }
-    } catch (error) {
-        next(error);
+    } catch (err) {
+        console.error(err.message);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
     }
-};
+}
 
 
-const login = async (req, res, next) => {
+const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const data = await authService.loginUser(email, password);
@@ -55,12 +67,14 @@ const login = async (req, res, next) => {
             sendError(res, data.message, data.statusCode);
         }
     } catch (error) {
-        next(error);
+        console.error("Unexpected error:", error);
+        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
     }
 };
 
 
-const refreshToken = async (req, res, next) => {
+const refreshToken = async (req, res) => {
+
     try {
         const data = await authService.refreshTokenService(req.body);
         if (!data.statusCode) {
@@ -69,12 +83,15 @@ const refreshToken = async (req, res, next) => {
         } else {
             sendError(res, data.message, data.statusCode);
         }
+
     } catch (error) {
-        next(error);
+        console.error(error.message);
+        res.status(500).json({ error: 'Server error' });
     }
+
 };
 
-const forgotPassword = async (req, res, next) => {
+const forgotPassword = async (req, res) => {
     try {
         const data = await authService.forgotPasswordService(req.body);
         if (!data.statusCode) {
@@ -83,11 +100,13 @@ const forgotPassword = async (req, res, next) => {
             sendError(res, data.message, data.statusCode);
         }
     } catch (error) {
-        next(error);
+        console.error(error.message);
+        res.status(500).json({ error: 'Server error' });
     }
-};
 
-const resetPassword = async (req, res, next) => {
+}
+
+const resetPassword = async (req, res) => {
     try {
         const data = await authService.resetPasswordService(req);
         if (!data.statusCode) {
@@ -96,9 +115,10 @@ const resetPassword = async (req, res, next) => {
             sendError(res, data.message, data.statusCode);
         }
     } catch (error) {
-        next(error);
+        console.error(error.message);
+        res.status(500).json({ error: 'Server error' });
     }
-};
+}
 
 
 module.exports = {

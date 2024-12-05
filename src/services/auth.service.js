@@ -1,85 +1,90 @@
 const { User, RefreshToken } = require('../models');
+const httpStatus = require('http-status');
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const httpStatus = require('http-status');
-const { Op } = require('sequelize');
-const { sequelize } = require('../models');
-const ApiError = require('../utils/ApiError');
 const { sendEmailVerification, sendResetEmail } = require('../utils/email');
 const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
-const { logger, logError } = require('../utils/logger');
+
+const ApiError = require('../utils/ApiError');
+
 
 const registerUser = async (data) => {
     try {
+
         const { first_name, last_name, email, password } = data;
-        if (!first_name || !last_name || !email || !password) {
-            throw new ApiError(httpStatus.BAD_REQUEST, 'All fields are required');
+
+        // Check if the user already exists
+        const existingUser = await User.findOne({ where: { email } });
+        if (existingUser) {
+            return { message: 'User Already Exist!', statusCode: 400 };
         }
 
-        const transaction = await sequelize.transaction();
-        try {
-            const existingUser = await User.findOne({ where: { email } });
-            if (existingUser) {
-                throw new ApiError(httpStatus.BAD_REQUEST, 'User Already Exists');
-            }
+        // Hash the password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
-
-            const newUser = await User.create({
-                first_name,
-                last_name,
-                email,
-                password: hashedPassword,
-                confirm_password: hashedPassword
-            }, { transaction });
-
-            await sendEmailVerification(newUser);
-            console.log("newUser", newUser);
-            await transaction.commit();
-
-            return newUser;
-        } catch (error) {
-            console.log("error", error);
-            await transaction.rollback();
-            throw error instanceof ApiError ? error :
-                new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
-        }
-    } catch (error) {
-        logger.error('Error in registerUser', {
-            error: error.message,
-            stack: error.stack
+        // Create a new user with the hashed password
+        const newUser = await User.create({
+            first_name,
+            last_name,
+            email,
+            password: hashedPassword,
+            confirm_password: hashedPassword
         });
-        throw error instanceof ApiError ? error :
-            new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        // Send email verification
+        sendEmailVerification(newUser);
+
+        return newUser;
+    } catch (error) {
+        console.log("Error in registerUser service:", error);
+        return { message: 'Internal Server Error', statusCode: 500 };
     }
 };
 
 
-const verifyUser = async (data) => {
+const verifyUser = async (token) => {
     try {
-        const { token } = data;
-        // Should check if token is expired
-        const decodedToken = jwt.verify(token, process.env.JWT_SECRET, {
-            ignoreExpiration: false
-        });
-        const { email } = decodedToken;
-
-        let user = await User.findOne({ where: { email } });
-        if (!user) {
-            return { message: 'Invalid or expired token', statusCode: 400 };
-
+        if (!token) {
+            return { message: 'Token is required', statusCode: httpStatus.BAD_REQUEST };
         }
-        //user is verified here
-        user.isVerified = true;
-        await user.save();
-        return user;
+        // Extract token string if token is an object
+        const tokenString = typeof token === 'object' ? token.token : token;
+        // Verify token using the same secret used for signing
+        const decoded = jwt.verify(tokenString, process.env.JWT_SECRET);
+        const user = await User.findOne({
+            where: {
+                email: decoded.email
+            }
+        });
 
+        if (!user) {
+            return { message: message.USER_NOT_FOUND, statusCode: httpStatus.NOT_FOUND };
+        }
+
+        if (user.isVerified) {
+            return { message: 'Email already verified', statusCode: httpStatus.BAD_REQUEST };
+        }
+
+        // Update user verification status
+        await user.update({ isVerified: true });
+
+        return {
+            user,
+            token: generateToken(user),
+            refreshToken: generateRefreshToken(user)
+        };
     } catch (error) {
-        console.error("Error in VerifyUser:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        console.error("Error in verifyUser service:", error);
+        if (error.name === 'JsonWebTokenError') {
+            return { message: 'Invalid token', statusCode: httpStatus.UNAUTHORIZED };
+        }
+        if (error.name === 'TokenExpiredError') {
+            return { message: 'Token expired', statusCode: httpStatus.UNAUTHORIZED };
+        }
+        return { message: 'Internal Server Error', statusCode: httpStatus.INTERNAL_SERVER_ERROR };
     }
-}
+};
 
 
 const resendVerifyUserEmail = async (data) => {
@@ -91,93 +96,64 @@ const resendVerifyUserEmail = async (data) => {
             return { message: 'User not found', statusCode: 400 };
 
         }
-        if (user.isVerified) {
-            throw new ApiError(httpStatus.BAD_REQUEST, 'Email is already verified');
-        }
         sendEmailVerification(user);
         return user;
 
     } catch (error) {
-        console.error("Error in resendVerifyUserEmail:", error);
+        console.log("Error in resendVerifyUserEmail service:", error);
         return { message: 'Internal Server Error', statusCode: 500 };
     }
 }
 
 const loginUser = async (email, password) => {
     try {
-        // Input validation
-        if (!email || !password) {
-            throw new ApiError(httpStatus.BAD_REQUEST, 'Email and password are required');
-        }
-
-        // Find user with select fields only
-        const user = await User.findOne({
-            where: { email },
-            attributes: ['id', 'email', 'password', 'isVerified'],
-            raw: true
-        });
+        const user = await User.findOne({ where: { email }, raw: true });
 
         if (!user) {
-            throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            return { message: 'User not found', statusCode: 404 };
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
-            throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid password');
+            return { message: 'Invalid password!', statusCode: 400 };
         }
 
         if (!user.isVerified) {
-            throw new ApiError(httpStatus.BAD_REQUEST, 'Please verify your email');
+            return { message: 'Please verify your email!', statusCode: 400 };
         }
+        console.log("user", user);
+        // Generate tokens
+        const token = generateToken(user);
+        const refreshToken = generateRefreshToken(user);
+        console.log("refreshToken", refreshToken);
+        // Save refresh token
+        await RefreshToken.create({
+            token: refreshToken,
+            userId: user.id,
+        });
 
-        const transaction = await sequelize.transaction();
-        try {
-            // Generate tokens
-            const token = generateToken(user);
-            const refreshToken = generateRefreshToken(user);
-
-            // Save refresh token
-            await RefreshToken.create({
-                token: refreshToken,
-                userId: user.id,
-            }, { transaction });
-
-            await transaction.commit();
-
-            // Remove password from response
-            delete user.password;
-
-            return { user, token, refreshToken };
-        } catch (error) {
-            await transaction.rollback();
-            throw error;
-        }
+        // Return plain data with statusCode for success
+        return {
+            user,
+            token,
+            refreshToken,
+        };
     } catch (error) {
-        logError(error, 'Error in loginUser');
-        throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        console.log("Error in loginUser service:", error);
+        return { message: 'Internal Server Error', statusCode: 500 };
     }
 };
 
 
 const refreshTokenService = async (data) => {
-    const { refreshToken } = data;
-    if (!refreshToken) {
-        throw new ApiError(httpStatus.BAD_REQUEST, 'Refresh token is required');
-    }
     try {
-        // Clean up expired tokens
-        await RefreshToken.destroy({
-            where: {
-                createdAt: {
-                    [Op.lt]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days
-                }
-            }
-        });
 
-        const refreshTokenData = await RefreshToken.findOne({
-            where: { token: refreshToken },
-            attributes: ['userId', 'token']
-        });
+        const { refreshToken } = data;
+        if (!refreshToken) {
+            return { message: 'Refresh token is required', statusCode: 401 };
+        }
+
+        const refreshTokenData = await RefreshToken.findOne({ token: refreshToken });
         if (!refreshTokenData) {
             return { message: 'Invalid refresh token', statusCode: 401 };
         }
@@ -195,7 +171,8 @@ const refreshTokenService = async (data) => {
         }
         return resData;
     } catch (error) {
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error');
+        console.log("Error in VerifyUser service:", error);
+        return { message: 'Internal Server Error', statusCode: 500 };
     }
 }
 
@@ -205,45 +182,47 @@ const forgotPasswordService = async (data) => {
         const { email } = data;
         let user = await User.findOne({ where: { email } });
         if (!user) {
-            throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            return { message: 'User not found', statusCode: 400 };
+
         }
-        await sendResetEmail(user);
+        sendResetEmail(user)
         return user;
+
     } catch (error) {
-        logError(error, 'Error in forgotPasswordService');
-        throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        console.log("Error in forgotPasswordService service:", error);
+        return { message: 'Internal Server Error', statusCode: 500 };
     }
-};
+}
 
 const resetPasswordService = async (data) => {
-    const { token, password } = data;
-
-    // Verify token and check expiration
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    if (Date.now() >= payload.exp * 1000) {
-        throw new ApiError(httpStatus.BAD_REQUEST, 'Reset token has expired');
-    }
-
-    // Use transaction for password update
-    const transaction = await sequelize.transaction();
     try {
-        const user = await User.findByPk(payload.userId);
-        await user.update({
-            password: await bcrypt.hash(password, 10)
-        }, { transaction });
+        // const { token, newPassword } = data;
 
-        // Invalidate all existing sessions
-        await RefreshToken.destroy({
-            where: { userId: user.id },
-            transaction
-        });
+        const { token } = data.query
+        const { password } = data.body
 
-        await transaction.commit();
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        const { email } = decodedToken;
+
+        console.log(email);
+
+        let user = await User.findOne({ where: { email } });
+        if (!user) {
+            return { message: 'Invalid or expired token', statusCode: 400 };
+
+        }
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        user.password = hashedPassword;
+        user.confirm_password = hashedPassword;
+        await user.save();
+        return user;
+
     } catch (error) {
-        await transaction.rollback();
-        throw error;
+        console.log("Error in resetPasswordService service:", error);
+        return { message: 'Internal Server Error', statusCode: 500 };
     }
-};
+}
 
 
 module.exports = {

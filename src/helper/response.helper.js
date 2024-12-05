@@ -22,7 +22,7 @@ function sendSuccess(res, data, message = 'Success', statusCode = 200) {
 //  * @param {number} [statusCode=500] - The HTTP status code.
  */
 function sendError(res, message, statusCode) {
-    logger.debug('Sending error response', { statusCode, message });
+    // logger.debug('Sending error response', { statusCode, message });
     res.status(statusCode).json({
         status: 'error',
         code: statusCode,

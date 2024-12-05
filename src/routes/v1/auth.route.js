@@ -13,6 +13,7 @@ const loginLimiter = rateLimit({
 
 router.post('/register', validate(authValidation.validateUser), authController.register);
 router.post('/login', loginLimiter, validate(authValidation.validateLoginUser), authController.login);
+router.get('/verify-email', authController.verifyEmail);
 router.post('/resend-verify-email', validate(authValidation.validateEmail), authController.resendVerifyEmail);
 router.post('/forgot-password', validate(authValidation.validateEmail), authController.forgotPassword);
 router.post('/reset-password', validate(authValidation.validateResetPassword), authController.resetPassword);

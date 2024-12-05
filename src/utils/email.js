@@ -36,9 +36,10 @@ const sendEmailVerification = async (user) => {
             html: html,
         });
 
-        logger.info(`Verification email sent to ${user.email}`);
+        // logger.info(`Verification email sent to ${user.email}`);
+        console.log(`Verification email sent to ${user.email}`);
     } catch (error) {
-        logError(error, 'Email sending failed');
+        console.log(error, 'Email sending failed');
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send verification email');
     }
 };
@@ -59,16 +60,18 @@ const sendResetEmail = async (user) => {
             html: html,
         });
 
-        logger.info(`Password reset email sent to ${user.email}`);
+        // logger.info(`Password reset email sent to ${user.email}`);
+        console.log(`Password reset email sent to ${user.email}`);
     } catch (error) {
-        logError(error, 'Password reset email sending failed');
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send password reset email');
+        // logError(error, 'Password reset email sending failed');
+        console.log(error, 'Password reset email sending failed');
+        // throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send password reset email');
     }
 };
 
 // Generate verification email HTML
 function getVerificationEmailHTML(user, token) {
-    const verificationLink = `${process.env.FRONTEND_URL}/api/auth/verify-email?token=${token}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/api/v1/auth/verify-email?token=${token}`;
     return `
         <h1>Email Verification</h1>
         <p>Hi ${user.name},</p>
@@ -80,7 +83,7 @@ function getVerificationEmailHTML(user, token) {
 
 // Generate reset email HTML
 function getResetEmailHTML(user, token) {
-    const resetLink = `${process.env.FRONTEND_URL}/api/auth/reset-password?token=${token}`;
+    const resetLink = `${process.env.FRONTEND_URL}/api/v1/auth/reset-password?token=${token}`;
     return `
         <h1>Reset Password</h1>
         <p>Hi ${user.name},</p>
