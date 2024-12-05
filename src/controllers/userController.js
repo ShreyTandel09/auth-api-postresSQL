@@ -1,63 +1,43 @@
 const httpStatus = require('http-status');
-const userService = require('../services/user.service')
-const message = require('../utils/responseMessage')
-const { sendSuccess, sendError } = require('../helper/response.helper');
+const userService = require('../services/user.service');
+const message = require('../utils/responseMessage');
+const { handleResponse, handleError } = require('../utils/responseHandler');
 
 const getUserProfile = async (req, res) => {
     try {
         const data = await userService.getCurrentUser(req);
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.USER_PROFILE_FETCH, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
+        handleResponse(res, data, message.USER_PROFILE_FETCH);
     } catch (error) {
-        console.error("Unexpected error:", error);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        handleError(res, error, 'getUserProfile');
     }
 };
 
 const getAllUsers = async (req, res) => {
     try {
         const data = await userService.getAllUsers();
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.USER_ALL, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
+        handleResponse(res, data, message.USER_ALL);
     } catch (error) {
-        console.error("Unexpected error:", error);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        handleError(res, error, 'getAllUsers');
     }
-}
+};
 
 const updateUserProfile = async (req, res) => {
     try {
         const data = await userService.updateUser(req.user.id, req.body);
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.USER_UPDATE, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
+        handleResponse(res, data, message.USER_UPDATE);
     } catch (error) {
-        console.error("Unexpected error:", error);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        handleError(res, error, 'updateUserProfile');
     }
-}
+};
 
 const updateUserProfilePicture = async (req, res) => {
     try {
         const data = await userService.uploadProfilePicture(req.user.id, req.file);
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.USER_UPDATE, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
+        handleResponse(res, data, message.USER_UPDATE);
     } catch (error) {
-        console.error("Unexpected error:", error);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        handleError(res, error, 'updateUserProfilePicture');
     }
-}
+};
 
 module.exports = {
     getUserProfile,

@@ -1,57 +1,84 @@
 const { User } = require('../models');
-const message = require('../utils/responseMessage')
+const message = require('../utils/responseMessage');
 const httpStatus = require('http-status');
 const { logger } = require('../utils/logger');
 
+const handleServiceError = (error, serviceName) => {
+    logger.error(`Error in ${serviceName} service:`, error);
+    return {
+        message: 'Internal Server Error',
+        statusCode: httpStatus.INTERNAL_SERVER_ERROR
+    };
+};
+
+const userNotFoundResponse = () => ({
+    message: message.USER_NOT_FOUND,
+    statusCode: httpStatus.NOT_FOUND
+});
+
 const getCurrentUser = async (data) => {
     try {
-        const user = await User.findByPk(data.user.id);
-        if (!user) {
-            return { message: message.USER_NOT_FOUND, statusCode: httpStatus.NOT_FOUND };
-        }
+        const user = await User.findByPk(data.user.id, {
+            attributes: { exclude: ['password', 'confirm_password'] }
+        });
+
+        if (!user) return userNotFoundResponse();
         return user;
     } catch (error) {
-        logger.error("Error in getCurrentUser service:", error);
-        return { message: 'Internal Server Error', statusCode: httpStatus.INTERNAL_SERVER_ERROR };
+        return handleServiceError(error, 'getCurrentUser');
     }
 };
 
 const getAllUsers = async () => {
     try {
-        const users = await User.findAll();
+        const users = await User.findAll({
+            attributes: {
+                exclude: ['password', 'confirm_password']
+            },
+            order: [['createdAt', 'DESC']]
+        });
         return { users };
     } catch (error) {
-        logger.error("Error in getAllUsers service:", error);
-        return { message: 'Internal Server Error', statusCode: httpStatus.INTERNAL_SERVER_ERROR };
+        return handleServiceError(error, 'getAllUsers');
     }
 };
 
 const updateUser = async (userId, userData) => {
     try {
         const user = await User.findByPk(userId);
-        if (!user) {
-            return { message: message.USER_NOT_FOUND, statusCode: httpStatus.NOT_FOUND };
-        }
-        await user.update(userData);
+        if (!user) return userNotFoundResponse();
+
+        // Remove sensitive fields from update
+        const { password, confirm_password, ...updateData } = userData;
+
+        await user.update(updateData);
         return user;
     } catch (error) {
-        logger.error("Error in updateUser service:", error);
-        return { message: 'Internal Server Error', statusCode: httpStatus.INTERNAL_SERVER_ERROR };
+        return handleServiceError(error, 'updateUser');
     }
 };
 
-const uploadProfilePicture = async (userId, data) => {
+const uploadProfilePicture = async (userId, file) => {
     try {
-        const user = await User.findByPk(userId);
-        if (!user) {
-            return { message: message.USER_NOT_FOUND, statusCode: httpStatus.NOT_FOUND };
+        if (!file) {
+            return {
+                message: 'No file uploaded',
+                statusCode: httpStatus.BAD_REQUEST
+            };
         }
-        user.user_image = `/uploads/${data.filename}`;
+
+        const user = await User.findByPk(userId);
+        if (!user) return userNotFoundResponse();
+
+        user.user_image = `/uploads/${file.filename}`;
         await user.save();
-        return user;
+
+        return {
+            user_image: user.user_image,
+            message: 'Profile picture updated successfully'
+        };
     } catch (error) {
-        logger.error("Error in uploadProfilePicture service:", error);
-        return { message: 'Internal Server Error', statusCode: httpStatus.INTERNAL_SERVER_ERROR };
+        return handleServiceError(error, 'uploadProfilePicture');
     }
 };
 

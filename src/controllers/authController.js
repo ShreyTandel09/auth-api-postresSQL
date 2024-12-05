@@ -1,131 +1,80 @@
-
 const httpStatus = require('http-status');
-
-const authService = require('../services/auth.service')
-const message = require('../utils/responseMessage')
-const { sendSuccess, sendError } = require('../helper/response.helper');
-const ApiError = require('../utils/ApiError');
-
+const authService = require('../services/auth.service');
+const message = require('../utils/responseMessage');
+const { handleResponse, handleError } = require('../utils/responseHandler');
 
 const register = async (req, res) => {
     try {
         const data = await authService.registerUser(req.body);
-
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.USER_REGISTER, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
-
+        handleResponse(res, data, message.USER_REGISTER);
     } catch (error) {
-        console.error("Unexpected error:", error);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        handleError(res, error, 'register');
     }
 };
 
-
 const verifyEmail = async (req, res) => {
-
     try {
         const data = await authService.verifyUser(req.query);
-        if (!data.statusCode) {
-            sendSuccess(res, [], message.EMAIL_VERIFIED, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
-    } catch (err) {
-        console.error(err.message);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        handleResponse(res, data, message.EMAIL_VERIFIED);
+    } catch (error) {
+        handleError(res, error, 'verifyEmail');
     }
-}
-
+};
 
 const resendVerifyEmail = async (req, res) => {
-
     try {
         const data = await authService.resendVerifyUserEmail(req.body);
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.VERIFY_EMAIL, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
-    } catch (err) {
-        console.error(err.message);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        handleResponse(res, data, message.VERIFY_EMAIL);
+    } catch (error) {
+        handleError(res, error, 'resendVerifyEmail');
     }
-}
-
+};
 
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const data = await authService.loginUser(email, password);
-        if (!data.statusCode) {
-            const { user, token, refreshToken } = data;
-            sendSuccess(res, { user, token, refreshToken }, message.USER_LOGGED_IN, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
+        handleResponse(res, data, message.USER_LOGGED_IN);
     } catch (error) {
-        console.error("Unexpected error:", error);
-        sendError(res, 'Something went wrong', httpStatus.INTERNAL_SERVER_ERROR)
+        handleError(res, error, 'login');
     }
 };
 
-
 const refreshToken = async (req, res) => {
-
     try {
         const data = await authService.refreshTokenService(req.body);
-        if (!data.statusCode) {
-            const { user, token, refreshToken } = data;
-            sendSuccess(res, { user, token, refreshToken }, message.TOKEN_GENERATED, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
-
+        handleResponse(res, data, message.TOKEN_GENERATED);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Server error' });
+        handleError(res, error, 'refreshToken');
     }
-
 };
 
 const forgotPassword = async (req, res) => {
     try {
         const data = await authService.forgotPasswordService(req.body);
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.PASSWORD_REST_LINK_SENT, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
+        handleResponse(res, data, message.PASSWORD_REST_LINK_SENT);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Server error' });
+        handleError(res, error, 'forgotPassword');
     }
-
-}
+};
 
 const resetPassword = async (req, res) => {
     try {
-        const data = await authService.resetPasswordService(req);
-        if (!data.statusCode) {
-            sendSuccess(res, data, message.PASSWORD_SET_SUCCESS, httpStatus.OK);
-        } else {
-            sendError(res, data.message, data.statusCode);
-        }
+        const data = await authService.resetPasswordService({
+            query: req.query,
+            body: req.body
+        });
+        handleResponse(res, data, message.PASSWORD_RESET_SUCCESS);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Server error' });
+        handleError(res, error, 'resetPassword');
     }
-}
-
+};
 
 module.exports = {
     register,
-    login,
     verifyEmail,
     resendVerifyEmail,
+    login,
     refreshToken,
     forgotPassword,
     resetPassword
