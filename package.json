@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "seed": "sequelize-cli db:seed:all",
@@ -28,7 +28,8 @@
     "sequelize-cli": "^6.6.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "name": "auth-restapi-sequelize",
   "description": "Simple Nodejs RestAPI for the Authentication using PostgresSql with middleware -Register -Email Verification -Login with JWT token -Refresh Token -Reset Password",
