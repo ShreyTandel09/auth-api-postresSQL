@@ -9,7 +9,7 @@ const swaggerOptions = {
         info: {
             title: 'Authentication API Documentation',
             version: '1.0.0',
-            description: 'A API Documentation for Authentication System',
+            description: 'API Documentation for Authentication System',
             contact: {
                 name: 'Your Name',
                 email: 'your.email@example.com',
@@ -17,7 +17,7 @@ const swaggerOptions = {
         },
         servers: [
             {
-                url: 'http://localhost:8000/api/v1',
+                url: process.env.API_URL || 'http://localhost:8000/api/v1',
                 description: 'Development server',
             },
         ],
@@ -32,10 +32,14 @@ const swaggerOptions = {
         },
     },
     apis: [
-        './docs/swagger/*.swagger.js'
+        './src/docs/swagger/*.swagger.js'
     ],
 };
 
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-
-module.exports = { swaggerUi, swaggerDocs };
+try {
+    const swaggerDocs = swaggerJsDoc(swaggerOptions);
+    module.exports = { swaggerUi, swaggerDocs };
+} catch (error) {
+    console.error('Error setting up Swagger:', error);
+    throw error;
+}

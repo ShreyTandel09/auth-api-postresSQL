@@ -30,7 +30,7 @@ const sendEmailVerification = async (user) => {
 
         // Send verification email
         await transporter.sendMail({
-            from: process.env.SMTP_USER, // Ensure this matches SMTP_USER
+            from: process.env.SMTP_USER,
             to: user.email,
             subject: 'Verify Your Email',
             html: html,
@@ -39,7 +39,7 @@ const sendEmailVerification = async (user) => {
         logger.info(`Verification email sent to ${user.email}`);
     } catch (error) {
         logError(error, 'Email sending failed');
-        // throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send verification email');
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send verification email');
     }
 };
 
@@ -47,13 +47,13 @@ const sendEmailVerification = async (user) => {
 const sendResetEmail = async (user) => {
     try {
         const token = jwtToken.generateToken(user, true); // Generate token for password reset
-        const html = getRestEmailHTML(user, token);
+        const html = getResetEmailHTML(user, token);
 
         const transporter = createTransporter();
 
         // Send reset password email
         await transporter.sendMail({
-            from: process.env.SMTP_USER, // Ensure this matches SMTP_USER
+            from: process.env.SMTP_USER,
             to: user.email,
             subject: 'Reset Your Password',
             html: html,
@@ -62,7 +62,7 @@ const sendResetEmail = async (user) => {
         logger.info(`Password reset email sent to ${user.email}`);
     } catch (error) {
         logError(error, 'Password reset email sending failed');
-        // throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send password reset email');
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send password reset email');
     }
 };
 
@@ -79,7 +79,7 @@ function getVerificationEmailHTML(user, token) {
 }
 
 // Generate reset email HTML
-function getRestEmailHTML(user, token) {
+function getResetEmailHTML(user, token) {
     const resetLink = `${process.env.FRONTEND_URL}/api/auth/reset-password?token=${token}`;
     return `
         <h1>Reset Password</h1>
