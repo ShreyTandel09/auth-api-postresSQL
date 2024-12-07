@@ -1,8 +1,8 @@
 module.exports = {
     USER_REGISTER: 'User registered successfully',
     USER_LOGGED_IN: 'User logged in successfully',
-    EMAIL_VERIFIED: 'Email Verified',
-    VERIFY_EMAIL: 'Verification Email Sent',
+    EMAIL_VERIFIED: 'Email verified successfully',
+    VERIFY_EMAIL: 'Verification email sent successfully',
     TOKEN_GENERATED: "New token Generated",
     USER_PROFILE_FETCH: 'User profile detail!',
     USER_ALL: 'All Users!',

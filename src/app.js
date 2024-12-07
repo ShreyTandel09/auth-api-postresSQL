@@ -20,7 +20,6 @@ app.use('/uploads', express.static('uploads'));
 // Add request logger before other middleware
 app.use(logRequest);
 
-
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, {
     explorer: true,
@@ -33,21 +32,27 @@ app.use('/api/v1', routes);
 // Error handler (must be after routes)
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 8000;
+// Export the app for testing
+module.exports = app;
 
-const startServer = async () => {
-    try {
-        await sequelize.authenticate();
-        logger.info('Database connected successfully');
+// Start server only if this file is run directly
+if (require.main === module) {
+    const PORT = process.env.PORT || 8000;
 
-        app.listen(PORT, () => {
-            logger.info(`Server is running on port ${PORT}`);
-            logger.info(`Swagger Documentation: http://localhost:${PORT}/api-docs`);
-        });
-    } catch (error) {
-        logger.error('Server startup failed', { error });
-        process.exit(1);
-    }
-};
+    const startServer = async () => {
+        try {
+            await sequelize.authenticate();
+            logger.info('Database connected successfully');
 
-startServer();
+            app.listen(PORT, () => {
+                logger.info(`Server is running on port ${PORT}`);
+                logger.info(`Swagger Documentation: http://localhost:${PORT}/api-docs`);
+            });
+        } catch (error) {
+            logger.error('Server startup failed', { error });
+            process.exit(1);
+        }
+    };
+
+    startServer();
+}

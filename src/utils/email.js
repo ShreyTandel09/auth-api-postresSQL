@@ -36,10 +36,12 @@ const sendEmailVerification = async (user) => {
             html: html,
         });
 
+        return token;
+
         // logger.info(`Verification email sent to ${user.email}`);
-        console.log(`Verification email sent to ${user.email}`);
+        // console.log(`Verification email sent to ${user.email}`);
     } catch (error) {
-        console.log(error, 'Email sending failed');
+        // console.log(error, 'Email sending failed');
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send verification email');
     }
 };
@@ -61,10 +63,10 @@ const sendResetEmail = async (user) => {
         });
 
         // logger.info(`Password reset email sent to ${user.email}`);
-        console.log(`Password reset email sent to ${user.email}`);
+        // console.log(`Password reset email sent to ${user.email}`);
     } catch (error) {
         // logError(error, 'Password reset email sending failed');
-        console.log(error, 'Password reset email sending failed');
+        // console.log(error, 'Password reset email sending failed');
         // throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send password reset email');
     }
 };

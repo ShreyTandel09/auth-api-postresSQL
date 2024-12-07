@@ -11,13 +11,16 @@ const ApiError = require('../utils/ApiError');
 
 const registerUser = async (data) => {
     try {
-
         const { first_name, last_name, email, password } = data;
 
         // Check if the user already exists
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
-            return { message: 'User Already Exist!', statusCode: 400 };
+            return {
+                success: false,
+                message: 'User Already Exist!',
+                statusCode: httpStatus.BAD_REQUEST
+            };
         }
 
         // Hash the password
@@ -32,13 +35,33 @@ const registerUser = async (data) => {
             password: hashedPassword,
             confirm_password: hashedPassword
         });
-        // Send email verification
-        sendEmailVerification(newUser);
 
-        return newUser;
+        // Send email verification
+        const verificationToken = await sendEmailVerification(newUser);
+
+        console.log("verificationToken", verificationToken);
+
+        // Format the user data to exclude sensitive information
+        return {
+            success: true,
+            statusCode: httpStatus.CREATED,
+            data: {
+                id: newUser.id,
+                first_name: newUser.first_name,
+                last_name: newUser.last_name,
+                email: newUser.email,
+                isVerified: newUser.isVerified,
+                verificationToken
+            }
+        };
+
     } catch (error) {
         console.log("Error in registerUser service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        return {
+            success: false,
+            message: 'Internal Server Error',
+            statusCode: httpStatus.INTERNAL_SERVER_ERROR
+        };
     }
 };
 
@@ -46,43 +69,69 @@ const registerUser = async (data) => {
 const verifyUser = async (token) => {
     try {
         if (!token) {
-            return { message: 'Token is required', statusCode: httpStatus.BAD_REQUEST };
+            return {
+                success: false,
+                message: 'Token is required',
+                statusCode: httpStatus.BAD_REQUEST
+            };
         }
+
         // Extract token string if token is an object
         const tokenString = typeof token === 'object' ? token.token : token;
-        // Verify token using the same secret used for signing
-        const decoded = jwt.verify(tokenString, process.env.JWT_SECRET);
-        const user = await User.findOne({
-            where: {
-                email: decoded.email
+
+        try {
+            // Verify token using the same secret used for signing
+            const decoded = jwt.verify(tokenString, process.env.JWT_SECRET);
+
+            const user = await User.findOne({
+                where: { email: decoded.email }
+            });
+
+            if (!user) {
+                return {
+                    success: false,
+                    message: 'User not found',
+                    statusCode: httpStatus.NOT_FOUND
+                };
             }
-        });
 
-        if (!user) {
-            return { message: message.USER_NOT_FOUND, statusCode: httpStatus.NOT_FOUND };
+            if (user.isVerified) {
+                return {
+                    success: false,
+                    message: 'Email already verified',
+                    statusCode: httpStatus.BAD_REQUEST
+                };
+            }
+
+            // Update user verification status
+            await user.update({ isVerified: true });
+
+            return {
+                success: true,
+                message: 'Email verified successfully',
+                statusCode: httpStatus.OK,
+                data: {
+                    id: user.id,
+                    email: user.email,
+                    isVerified: true
+                }
+            };
+
+        } catch (jwtError) {
+            return {
+                success: false,
+                message: 'Invalid verification token',
+                statusCode: httpStatus.BAD_REQUEST
+            };
         }
 
-        if (user.isVerified) {
-            return { message: 'Email already verified', statusCode: httpStatus.BAD_REQUEST };
-        }
-
-        // Update user verification status
-        await user.update({ isVerified: true });
-
-        return {
-            user,
-            token: generateToken(user),
-            refreshToken: generateRefreshToken(user)
-        };
     } catch (error) {
         console.error("Error in verifyUser service:", error);
-        if (error.name === 'JsonWebTokenError') {
-            return { message: 'Invalid token', statusCode: httpStatus.UNAUTHORIZED };
-        }
-        if (error.name === 'TokenExpiredError') {
-            return { message: 'Token expired', statusCode: httpStatus.UNAUTHORIZED };
-        }
-        return { message: 'Internal Server Error', statusCode: httpStatus.INTERNAL_SERVER_ERROR };
+        return {
+            success: false,
+            message: 'Internal Server Error',
+            statusCode: httpStatus.INTERNAL_SERVER_ERROR
+        };
     }
 };
 
@@ -91,56 +140,114 @@ const resendVerifyUserEmail = async (data) => {
     try {
         const { email } = data;
 
-        let user = await User.findOne({ where: { email } });
+        // Find user
+        const user = await User.findOne({ where: { email } });
         if (!user) {
-            return { message: 'User not found', statusCode: 400 };
-
+            return {
+                success: false,
+                message: 'User not found',
+                statusCode: httpStatus.NOT_FOUND
+            };
         }
-        sendEmailVerification(user);
-        return user;
+
+        // Check if already verified
+        if (user.isVerified) {
+            return {
+                success: false,
+                message: 'Email already verified',
+                statusCode: httpStatus.BAD_REQUEST
+            };
+        }
+
+        // Send verification email
+        const verificationToken = await sendEmailVerification(user);
+
+        return {
+            success: true,
+            message: 'Verification email sent successfully',
+            statusCode: httpStatus.OK,
+            data: {
+                id: user.id,
+                email: user.email,
+                verificationToken
+            }
+        };
 
     } catch (error) {
         console.log("Error in resendVerifyUserEmail service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        return {
+            success: false,
+            message: 'Internal Server Error',
+            statusCode: httpStatus.INTERNAL_SERVER_ERROR
+        };
     }
-}
+};
 
 const loginUser = async (email, password) => {
     try {
         const user = await User.findOne({ where: { email }, raw: true });
 
         if (!user) {
-            return { message: 'User not found', statusCode: 404 };
+            return {
+                success: false,
+                message: 'User not found',
+                statusCode: httpStatus.NOT_FOUND
+            };
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
-            return { message: 'Invalid password!', statusCode: 400 };
+            return {
+                success: false,
+                message: 'Invalid Credentials!',
+                statusCode: httpStatus.BAD_REQUEST
+            };
         }
 
         if (!user.isVerified) {
-            return { message: 'Please verify your email!', statusCode: 400 };
+            return {
+                success: false,
+                message: 'Please verify your email!',
+                statusCode: httpStatus.BAD_REQUEST
+            };
         }
-        console.log("user", user);
+
         // Generate tokens
         const token = generateToken(user);
         const refreshToken = generateRefreshToken(user);
-        console.log("refreshToken", refreshToken);
+
         // Save refresh token
         await RefreshToken.create({
             token: refreshToken,
             userId: user.id,
         });
 
-        // Return plain data with statusCode for success
-        return {
-            user,
-            token,
-            refreshToken,
+        // Format user data to exclude sensitive information
+        const userData = {
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            isVerified: user.isVerified
         };
+
+        return {
+            success: true,
+            statusCode: httpStatus.OK,
+            data: {
+                user: userData,
+                token,
+                refreshToken
+            }
+        };
+
     } catch (error) {
         console.log("Error in loginUser service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        return {
+            success: false,
+            message: 'Internal Server Error',
+            statusCode: httpStatus.INTERNAL_SERVER_ERROR
+        };
     }
 };
 

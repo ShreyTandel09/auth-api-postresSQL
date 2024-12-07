@@ -37,7 +37,7 @@
  *         email:
  *           type: string
  *           format: email
- *           example: john@example.com
+ *           example: john@yopmail.com
  *         isVerified:
  *           type: boolean
  *           example: false

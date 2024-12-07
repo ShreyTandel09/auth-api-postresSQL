@@ -16,7 +16,7 @@
  *           example: Doe
  *         email:
  *           type: string
- *           example: john@example.com
+ *           example: john@yopmail.com
  *         user_image:
  *           type: string
  *           example: /uploads/profile.jpg

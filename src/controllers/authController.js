@@ -34,6 +34,8 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const data = await authService.loginUser(email, password);
+        console.log("data", data);
+
         handleResponse(res, data, message.USER_LOGGED_IN);
     } catch (error) {
         handleError(res, error, 'login');

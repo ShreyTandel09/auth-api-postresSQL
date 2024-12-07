@@ -18,7 +18,7 @@ const validateUser = {
         email: Joi.string().email().required(),
         password: Joi.string().min(6).required(),
         confirm_password: Joi.string().valid(Joi.ref('password')).required().messages({
-            'any.only': 'Confirm Password must match the Password'
+            'any.only': 'Passwords must match'
         })
     })
 }
@@ -33,7 +33,7 @@ const validateResetPassword = {
     body: Joi.object().keys({
         password: Joi.string().min(6).required(),
         confirm_password: Joi.string().valid(Joi.ref('password')).required().messages({
-            'any.only': 'Confirm Password must match the Password'
+            'any.only': 'Passwords must match'
         })
     })
 }

@@ -1,5 +1,6 @@
 node_modules/
 .env
+.env.test
 /config.json
 /uploads
 commands.txt
