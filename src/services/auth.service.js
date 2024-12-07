@@ -1,33 +1,44 @@
 const { User, RefreshToken } = require('../models');
 const httpStatus = require('http-status');
-
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendEmailVerification, sendResetEmail } = require('../utils/email');
 const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
+const logger = require('../utils/logger');
 
-const ApiError = require('../utils/ApiError');
+// Helper functions
+const createErrorResponse = (message, statusCode) => ({
+    success: false,
+    message,
+    statusCode
+});
 
+const createSuccessResponse = (data, statusCode = httpStatus.OK) => ({
+    success: true,
+    statusCode,
+    data
+});
+
+const handleServiceError = (error, serviceName) => {
+    logger.error(`Error in ${serviceName} service:`, error);
+    return createErrorResponse('Internal Server Error', httpStatus.INTERNAL_SERVER_ERROR);
+};
+
+const hashPassword = async (password) => {
+    const salt = await bcrypt.genSalt(10);
+    return bcrypt.hash(password, salt);
+};
 
 const registerUser = async (data) => {
     try {
         const { first_name, last_name, email, password } = data;
 
-        // Check if the user already exists
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
-            return {
-                success: false,
-                message: 'User Already Exist!',
-                statusCode: httpStatus.BAD_REQUEST
-            };
+            return createErrorResponse('User Already Exist!', httpStatus.BAD_REQUEST);
         }
 
-        // Hash the password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Create a new user with the hashed password
+        const hashedPassword = await hashPassword(password);
         const newUser = await User.create({
             first_name,
             last_name,
@@ -36,150 +47,78 @@ const registerUser = async (data) => {
             confirm_password: hashedPassword
         });
 
-        // Send email verification
         const verificationToken = await sendEmailVerification(newUser);
 
-        console.log("verificationToken", verificationToken);
-
-        // Format the user data to exclude sensitive information
-        return {
-            success: true,
-            statusCode: httpStatus.CREATED,
-            data: {
-                id: newUser.id,
-                first_name: newUser.first_name,
-                last_name: newUser.last_name,
-                email: newUser.email,
-                isVerified: newUser.isVerified,
-                verificationToken
-            }
-        };
-
+        return createSuccessResponse({
+            id: newUser.id,
+            first_name: newUser.first_name,
+            last_name: newUser.last_name,
+            email: newUser.email,
+            isVerified: newUser.isVerified,
+            verificationToken
+        }, httpStatus.CREATED);
     } catch (error) {
-        console.log("Error in registerUser service:", error);
-        return {
-            success: false,
-            message: 'Internal Server Error',
-            statusCode: httpStatus.INTERNAL_SERVER_ERROR
-        };
+        return handleServiceError(error, 'registerUser');
     }
 };
-
 
 const verifyUser = async (token) => {
     try {
         if (!token) {
-            return {
-                success: false,
-                message: 'Token is required',
-                statusCode: httpStatus.BAD_REQUEST
-            };
+            return createErrorResponse('Token is required', httpStatus.BAD_REQUEST);
         }
 
-        // Extract token string if token is an object
         const tokenString = typeof token === 'object' ? token.token : token;
 
         try {
-            // Verify token using the same secret used for signing
             const decoded = jwt.verify(tokenString, process.env.JWT_SECRET);
-
-            const user = await User.findOne({
-                where: { email: decoded.email }
-            });
+            const user = await User.findOne({ where: { email: decoded.email } });
 
             if (!user) {
-                return {
-                    success: false,
-                    message: 'User not found',
-                    statusCode: httpStatus.NOT_FOUND
-                };
+                return createErrorResponse('User not found', httpStatus.NOT_FOUND);
             }
 
             if (user.isVerified) {
-                return {
-                    success: false,
-                    message: 'Email already verified',
-                    statusCode: httpStatus.BAD_REQUEST
-                };
+                return createErrorResponse('Email already verified', httpStatus.BAD_REQUEST);
             }
 
-            // Update user verification status
             await user.update({ isVerified: true });
 
-            return {
-                success: true,
-                message: 'Email verified successfully',
-                statusCode: httpStatus.OK,
-                data: {
-                    id: user.id,
-                    email: user.email,
-                    isVerified: true
-                }
-            };
-
+            return createSuccessResponse({
+                id: user.id,
+                email: user.email,
+                isVerified: true
+            });
         } catch (jwtError) {
-            return {
-                success: false,
-                message: 'Invalid verification token',
-                statusCode: httpStatus.BAD_REQUEST
-            };
+            return createErrorResponse('Invalid verification token', httpStatus.BAD_REQUEST);
         }
-
     } catch (error) {
-        console.error("Error in verifyUser service:", error);
-        return {
-            success: false,
-            message: 'Internal Server Error',
-            statusCode: httpStatus.INTERNAL_SERVER_ERROR
-        };
+        return handleServiceError(error, 'verifyUser');
     }
 };
-
 
 const resendVerifyUserEmail = async (data) => {
     try {
         const { email } = data;
-
-        // Find user
         const user = await User.findOne({ where: { email } });
+
         if (!user) {
-            return {
-                success: false,
-                message: 'User not found',
-                statusCode: httpStatus.NOT_FOUND
-            };
+            return createErrorResponse('User not found', httpStatus.NOT_FOUND);
         }
 
-        // Check if already verified
         if (user.isVerified) {
-            return {
-                success: false,
-                message: 'Email already verified',
-                statusCode: httpStatus.BAD_REQUEST
-            };
+            return createErrorResponse('Email already verified', httpStatus.BAD_REQUEST);
         }
 
-        // Send verification email
         const verificationToken = await sendEmailVerification(user);
 
-        return {
-            success: true,
-            message: 'Verification email sent successfully',
-            statusCode: httpStatus.OK,
-            data: {
-                id: user.id,
-                email: user.email,
-                verificationToken
-            }
-        };
-
+        return createSuccessResponse({
+            id: user.id,
+            email: user.email,
+            verificationToken
+        });
     } catch (error) {
-        console.log("Error in resendVerifyUserEmail service:", error);
-        return {
-            success: false,
-            message: 'Internal Server Error',
-            statusCode: httpStatus.INTERNAL_SERVER_ERROR
-        };
+        return handleServiceError(error, 'resendVerifyUserEmail');
     }
 };
 
@@ -188,155 +127,117 @@ const loginUser = async (email, password) => {
         const user = await User.findOne({ where: { email }, raw: true });
 
         if (!user) {
-            return {
-                success: false,
-                message: 'User not found',
-                statusCode: httpStatus.NOT_FOUND
-            };
+            return createErrorResponse('User not found', httpStatus.NOT_FOUND);
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
-            return {
-                success: false,
-                message: 'Invalid Credentials!',
-                statusCode: httpStatus.BAD_REQUEST
-            };
+            return createErrorResponse('Invalid Credentials!', httpStatus.BAD_REQUEST);
         }
 
         if (!user.isVerified) {
-            return {
-                success: false,
-                message: 'Please verify your email!',
-                statusCode: httpStatus.BAD_REQUEST
-            };
+            return createErrorResponse('Please verify your email!', httpStatus.BAD_REQUEST);
         }
 
-        // Generate tokens
         const token = generateToken(user);
         const refreshToken = generateRefreshToken(user);
 
-        // Save refresh token
         await RefreshToken.create({
             token: refreshToken,
             userId: user.id,
         });
 
-        // Format user data to exclude sensitive information
-        const userData = {
-            id: user.id,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            email: user.email,
-            isVerified: user.isVerified
-        };
-
-        return {
-            success: true,
-            statusCode: httpStatus.OK,
-            data: {
-                user: userData,
-                token,
-                refreshToken
-            }
-        };
-
+        return createSuccessResponse({
+            user: {
+                id: user.id,
+                first_name: user.first_name,
+                last_name: user.last_name,
+                email: user.email,
+                isVerified: user.isVerified
+            },
+            token,
+            refreshToken
+        });
     } catch (error) {
-        console.log("Error in loginUser service:", error);
-        return {
-            success: false,
-            message: 'Internal Server Error',
-            statusCode: httpStatus.INTERNAL_SERVER_ERROR
-        };
+        return handleServiceError(error, 'loginUser');
     }
 };
 
-
 const refreshTokenService = async (data) => {
     try {
-
         const { refreshToken } = data;
+
         if (!refreshToken) {
-            return { message: 'Refresh token is required', statusCode: 401 };
+            return createErrorResponse('Refresh token is required', httpStatus.UNAUTHORIZED);
         }
 
-        const refreshTokenData = await RefreshToken.findOne({ token: refreshToken });
+        const refreshTokenData = await RefreshToken.findOne({ where: { token: refreshToken } });
         if (!refreshTokenData) {
-            return { message: 'Invalid refresh token', statusCode: 401 };
+            return createErrorResponse('Invalid refresh token', httpStatus.UNAUTHORIZED);
         }
 
         const user = await User.findByPk(refreshTokenData.userId);
         if (!user) {
-            return { message: 'User not found', statusCode: 404 };
+            return createErrorResponse('User not found', httpStatus.NOT_FOUND);
         }
-        const newAccessToken = generateToken(user);
 
-        const resData = {
+        const newAccessToken = generateToken(user);
+        return createSuccessResponse({
             user,
             token: newAccessToken,
-            refreshToken: refreshToken
-        }
-        return resData;
+            refreshToken
+        });
     } catch (error) {
-        console.log("Error in VerifyUser service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        return handleServiceError(error, 'refreshToken');
     }
-}
-
+};
 
 const forgotPasswordService = async (data) => {
     try {
         const { email } = data;
-        let user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ where: { email } });
+
         if (!user) {
-            return { message: 'User not found', statusCode: 400 };
-
+            return createErrorResponse('User not found', httpStatus.BAD_REQUEST);
         }
-        sendResetEmail(user)
-        return user;
 
+        await sendResetEmail(user);
+        return createSuccessResponse({ email: user.email });
     } catch (error) {
-        console.log("Error in forgotPasswordService service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        return handleServiceError(error, 'forgotPassword');
     }
-}
+};
 
 const resetPasswordService = async (data) => {
     try {
-        // const { token, newPassword } = data;
-
-        const { token } = data.query
-        const { password } = data.body
+        const { token } = data.query;
+        const { password } = data.body;
 
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         const { email } = decodedToken;
 
-        console.log(email);
-
-        let user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ where: { email } });
         if (!user) {
-            return { message: 'Invalid or expired token', statusCode: 400 };
-
+            return createErrorResponse('Invalid or expired token', httpStatus.BAD_REQUEST);
         }
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-        user.password = hashedPassword;
-        user.confirm_password = hashedPassword;
-        await user.save();
-        return user;
 
+        const hashedPassword = await hashPassword(password);
+        await user.update({
+            password: hashedPassword,
+            confirm_password: hashedPassword
+        });
+
+        return createSuccessResponse({ message: 'Password reset successful' });
     } catch (error) {
-        console.log("Error in resetPasswordService service:", error);
-        return { message: 'Internal Server Error', statusCode: 500 };
+        return handleServiceError(error, 'resetPassword');
     }
-}
-
+};
 
 module.exports = {
-    loginUser,
+    registerUser,
     verifyUser,
     resendVerifyUserEmail,
-    registerUser,
+    loginUser,
     refreshTokenService,
     forgotPasswordService,
     resetPasswordService
