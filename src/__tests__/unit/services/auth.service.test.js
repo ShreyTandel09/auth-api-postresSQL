@@ -52,14 +52,15 @@ describe('Auth Service', () => {
 
             expect(result).toEqual({
                 success: true,
+                message: 'Operation successful',
                 statusCode: httpStatus.CREATED,
                 data: {
-                    id: mockCreatedUser.id,
-                    first_name: mockCreatedUser.first_name,
-                    last_name: mockCreatedUser.last_name,
-                    email: mockCreatedUser.email,
-                    isVerified: mockCreatedUser.isVerified,
-                    verificationToken: mockVerificationToken
+                    id: 1,
+                    first_name: 'John',
+                    last_name: 'Doe',
+                    email: 'john@yopmail.com',
+                    isVerified: false,
+                    verificationToken: 'mock-verification-token'
                 }
             });
         });
@@ -100,7 +101,7 @@ describe('Auth Service', () => {
                 id: 1,
                 first_name: 'John',
                 last_name: 'Doe',
-                email: mockCredentials.email,
+                email: 'john@yopmail.com',
                 password: 'hashedPassword',
                 isVerified: true
             };
@@ -125,17 +126,18 @@ describe('Auth Service', () => {
 
             expect(result).toEqual({
                 success: true,
+                message: 'Operation successful',
                 statusCode: httpStatus.OK,
                 data: {
                     user: {
-                        id: mockUser.id,
-                        first_name: mockUser.first_name,
-                        last_name: mockUser.last_name,
-                        email: mockUser.email,
-                        isVerified: mockUser.isVerified
+                        id: 1,
+                        first_name: 'John',
+                        last_name: 'Doe',
+                        email: 'john@yopmail.com',
+                        isVerified: true
                     },
-                    token: mockToken,
-                    refreshToken: mockRefreshToken
+                    token: 'mock-access-token',
+                    refreshToken: 'mock-refresh-token'
                 }
             });
         });

@@ -4,26 +4,15 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendEmailVerification, sendResetEmail } = require('../utils/email');
 const { generateToken, generateRefreshToken } = require('../utils/jwtToken');
-const logger = require('../utils/logger');
+const {
+    createSuccessResponse,
+    createBadRequestResponse,
+    createNotFoundResponse,
+    handleServiceError,
+    createUnauthorizedResponse
+} = require('../utils/responseHelper');
 
-// Helper functions
-const createErrorResponse = (message, statusCode) => ({
-    success: false,
-    message,
-    statusCode
-});
-
-const createSuccessResponse = (data, statusCode = httpStatus.OK) => ({
-    success: true,
-    statusCode,
-    data
-});
-
-const handleServiceError = (error, serviceName) => {
-    logger.error(`Error in ${serviceName} service:`, error);
-    return createErrorResponse('Internal Server Error', httpStatus.INTERNAL_SERVER_ERROR);
-};
-
+// Password Helper
 const hashPassword = async (password) => {
     const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);
@@ -35,7 +24,7 @@ const registerUser = async (data) => {
 
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
-            return createErrorResponse('User Already Exist!', httpStatus.BAD_REQUEST);
+            return createBadRequestResponse('User Already Exist!');
         }
 
         const hashedPassword = await hashPassword(password);
@@ -65,7 +54,7 @@ const registerUser = async (data) => {
 const verifyUser = async (token) => {
     try {
         if (!token) {
-            return createErrorResponse('Token is required', httpStatus.BAD_REQUEST);
+            return createBadRequestResponse('Token is required');
         }
 
         const tokenString = typeof token === 'object' ? token.token : token;
@@ -75,11 +64,11 @@ const verifyUser = async (token) => {
             const user = await User.findOne({ where: { email: decoded.email } });
 
             if (!user) {
-                return createErrorResponse('User not found', httpStatus.NOT_FOUND);
+                return createNotFoundResponse('User');
             }
 
             if (user.isVerified) {
-                return createErrorResponse('Email already verified', httpStatus.BAD_REQUEST);
+                return createBadRequestResponse('Email already verified');
             }
 
             await user.update({ isVerified: true });
@@ -90,7 +79,7 @@ const verifyUser = async (token) => {
                 isVerified: true
             });
         } catch (jwtError) {
-            return createErrorResponse('Invalid verification token', httpStatus.BAD_REQUEST);
+            return createBadRequestResponse('Invalid verification token');
         }
     } catch (error) {
         return handleServiceError(error, 'verifyUser');
@@ -103,11 +92,11 @@ const resendVerifyUserEmail = async (data) => {
         const user = await User.findOne({ where: { email } });
 
         if (!user) {
-            return createErrorResponse('User not found', httpStatus.NOT_FOUND);
+            return createNotFoundResponse('User');
         }
 
         if (user.isVerified) {
-            return createErrorResponse('Email already verified', httpStatus.BAD_REQUEST);
+            return createBadRequestResponse('Email already verified');
         }
 
         const verificationToken = await sendEmailVerification(user);
@@ -127,16 +116,16 @@ const loginUser = async (email, password) => {
         const user = await User.findOne({ where: { email }, raw: true });
 
         if (!user) {
-            return createErrorResponse('User not found', httpStatus.NOT_FOUND);
+            return createNotFoundResponse('User');
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
-            return createErrorResponse('Invalid Credentials!', httpStatus.BAD_REQUEST);
+            return createBadRequestResponse('Invalid Credentials!');
         }
 
         if (!user.isVerified) {
-            return createErrorResponse('Please verify your email!', httpStatus.BAD_REQUEST);
+            return createBadRequestResponse('Please verify your email!');
         }
 
         const token = generateToken(user);
@@ -168,17 +157,17 @@ const refreshTokenService = async (data) => {
         const { refreshToken } = data;
 
         if (!refreshToken) {
-            return createErrorResponse('Refresh token is required', httpStatus.UNAUTHORIZED);
+            return createUnauthorizedResponse('Refresh token is required');
         }
 
         const refreshTokenData = await RefreshToken.findOne({ where: { token: refreshToken } });
         if (!refreshTokenData) {
-            return createErrorResponse('Invalid refresh token', httpStatus.UNAUTHORIZED);
+            return createUnauthorizedResponse('Invalid refresh token');
         }
 
         const user = await User.findByPk(refreshTokenData.userId);
         if (!user) {
-            return createErrorResponse('User not found', httpStatus.NOT_FOUND);
+            return createNotFoundResponse('User');
         }
 
         const newAccessToken = generateToken(user);
@@ -198,7 +187,7 @@ const forgotPasswordService = async (data) => {
         const user = await User.findOne({ where: { email } });
 
         if (!user) {
-            return createErrorResponse('User not found', httpStatus.BAD_REQUEST);
+            return createBadRequestResponse('User not found');
         }
 
         await sendResetEmail(user);
@@ -218,7 +207,7 @@ const resetPasswordService = async (data) => {
 
         const user = await User.findOne({ where: { email } });
         if (!user) {
-            return createErrorResponse('Invalid or expired token', httpStatus.BAD_REQUEST);
+            return createBadRequestResponse('Invalid or expired token');
         }
 
         const hashedPassword = await hashPassword(password);
