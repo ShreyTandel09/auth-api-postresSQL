@@ -4,8 +4,4 @@ node_modules/
 /config.json
 /uploads
 commands.txt
-logs/
-*.log
 .vscode/
-.idea/
-.DS_Store

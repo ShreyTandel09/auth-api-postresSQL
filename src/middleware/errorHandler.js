@@ -2,9 +2,9 @@ const logger = require('../utils/logger');
 const ApiError = require('../utils/ApiError');
 const httpStatus = require('http-status');
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler = async (err, req, res, next) => {
     // Log the error using the logError helper
-    logger.logError(err, req);
+    await logger.logError(err, req);
 
     if (err instanceof ApiError) {
         return res.status(err.statusCode).json({

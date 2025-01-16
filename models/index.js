@@ -6,7 +6,7 @@ const Sequelize = require('sequelize');
 const process = require('process');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
-const config = require(__dirname + '/../config/config.js')[env];
+const config = require(__dirname + '/../config/config.json')[env];
 const db = {};
 
 let sequelize;
@@ -18,7 +18,7 @@ if (config.use_env_variable) {
 
 fs
   .readdirSync(__dirname)
-  .filter(file => {   //filter: Filters out the files that should not be processed:
+  .filter(file => {
     return (
       file.indexOf('.') !== 0 &&
       file !== basename &&
@@ -26,20 +26,18 @@ fs
       file.indexOf('.test.js') === -1
     );
   })
-  .forEach(file => {   //For each file:Initializes the model with the Sequelize instance and Sequelize.DataTypes.Adds the model to the db object, using the model's name as the key.
+  .forEach(file => {
     const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
     db[model.name] = model;
   });
 
-
 Object.keys(db).forEach(modelName => {
-  if (db[modelName].associate) { //Checks if the model has an associate method.
+  if (db[modelName].associate) {
     db[modelName].associate(db);
   }
 });
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
-
 
 module.exports = db;
