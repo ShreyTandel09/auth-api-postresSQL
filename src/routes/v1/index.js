@@ -6,6 +6,6 @@ const router = express.Router();
 
 // Define routes
 router.use('/auth', authRoute);
-router.use('/users', userRoute);
+router.use('/user', userRoute);
 
 module.exports = router;
