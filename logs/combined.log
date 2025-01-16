@@ -1,6 +1,0 @@
-{"level":"info","message":"Database connected successfully","service":"api-service","timestamp":"2025-01-16T12:01:58.018Z"}
-{"level":"info","message":"Server is running on port 8000","service":"api-service","timestamp":"2025-01-16T12:01:58.023Z"}
-{"level":"info","message":"Swagger Documentation: http://localhost:8000/api-docs","service":"api-service","timestamp":"2025-01-16T12:01:58.024Z"}
-{"level":"info","message":"Database connected successfully","service":"api-service","timestamp":"2025-01-16T12:04:09.689Z"}
-{"level":"info","message":"Server is running on port 8000","service":"api-service","timestamp":"2025-01-16T12:04:09.693Z"}
-{"level":"info","message":"Swagger Documentation: http://localhost:8000/api-docs","service":"api-service","timestamp":"2025-01-16T12:04:09.693Z"}
