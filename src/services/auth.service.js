@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { User, RefreshToken } = require('../models');
 const httpStatus = require('http-status');
 const bcrypt = require('bcryptjs');
@@ -21,6 +22,7 @@ const hashPassword = async (password) => {
 const registerUser = async (data) => {
     try {
         const { first_name, last_name, email, password } = data;
+        let verificationToken = '' ;
 
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
@@ -36,7 +38,13 @@ const registerUser = async (data) => {
             confirm_password: hashedPassword
         });
 
-        const verificationToken = await sendEmailVerification(newUser);
+        if(process.env.EMAIL_VERIFICATION == "true"){
+            verificationToken =  await sendEmailVerification(newUser);
+        }else{
+            newUser.isVerified = true;
+            await newUser.save();
+        }
+
 
         return createSuccessResponse({
             id: newUser.id,

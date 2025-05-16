@@ -37,7 +37,7 @@ module.exports = app;
 
 // Start server only if this file is run directly
 if (require.main === module) {
-    const PORT = process.env.PORT || 8000;
+    const PORT = process.env.PORT || 8005;
 
     const startServer = async () => {
         try {
@@ -47,6 +47,7 @@ if (require.main === module) {
             app.listen(PORT, () => {
                 logger.info(`Server is running on port ${PORT}`);
                 logger.info(`Swagger Documentation: http://localhost:${PORT}/api-docs`);
+                logger.info(`Server started successfully`);
             });
         } catch (error) {
             logger.error('Server startup failed', { error });
